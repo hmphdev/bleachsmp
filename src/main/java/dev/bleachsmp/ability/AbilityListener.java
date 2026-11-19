@@ -2,18 +2,18 @@ package dev.bleachsmp.ability;
 
 import dev.bleachsmp.BleachSmpPlugin;
 import dev.bleachsmp.faction.Faction;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -26,16 +26,23 @@ import org.bukkit.util.Vector;
 
 public final class AbilityListener implements Listener {
     private final BleachSmpPlugin plugin;
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final NamespacedKey cooldownReadyAtKey;
 
     public AbilityListener(BleachSmpPlugin plugin) {
         this.plugin = plugin;
+        this.cooldownReadyAtKey = new NamespacedKey(plugin, "starter_ability_ready_at");
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onStarterItemUse(PlayerInteractEvent event) {
+        Action action = event.getAction();
         if (event.getHand() != EquipmentSlot.HAND
-                || (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)) {
+                || (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK)) {
+            return;
+        }
+        // Paper initially denies block use on right-clicks in air even when item use is allowed.
+        if (event.useItemInHand() == Event.Result.DENY
+                || (action == Action.RIGHT_CLICK_BLOCK && event.useInteractedBlock() == Event.Result.DENY)) {
             return;
         }
 
@@ -53,13 +60,15 @@ public final class AbilityListener implements Listener {
             return;
         }
 
+        var data = player.getPersistentDataContainer();
         long now = System.currentTimeMillis();
-        long readyAt = cooldowns.getOrDefault(player.getUniqueId(), 0L);
+        long readyAt = data.getOrDefault(cooldownReadyAtKey, PersistentDataType.LONG, 0L);
         if (readyAt > now) {
             long seconds = (readyAt - now + 999L) / 1000L;
             player.sendMessage(Component.text("Ability ready in " + seconds + "s.", NamedTextColor.YELLOW));
             return;
         }
+        data.remove(cooldownReadyAtKey);
 
         if (!activate(player, faction)) {
             return;
@@ -67,7 +76,9 @@ public final class AbilityListener implements Listener {
         event.setCancelled(true);
         long cooldownSeconds = Math.max(0L,
                 plugin.getConfig().getLong("abilities." + faction.name() + ".cooldown-seconds", 30L));
-        cooldowns.put(player.getUniqueId(), now + cooldownSeconds * 1000L);
+        if (cooldownSeconds > 0) {
+            data.set(cooldownReadyAtKey, PersistentDataType.LONG, now + cooldownSeconds * 1000L);
+        }
     }
 
     private boolean isFactionStarter(Player player, Faction faction) {

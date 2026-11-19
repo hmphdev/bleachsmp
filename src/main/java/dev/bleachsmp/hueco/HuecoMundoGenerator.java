@@ -4,12 +4,15 @@ import java.util.List;
 import java.util.Random;
 import org.bukkit.Material;
 import org.bukkit.block.Biome;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
 
 public final class HuecoMundoGenerator extends ChunkGenerator {
     private static final int TERRAIN_BASE_Y = 40;
+    private static final int GATE_PLINTH_HEIGHT = 6;
+    private final BlockData gateStep = Material.QUARTZ_SLAB.createBlockData();
     private static final Material[] PALETTE = {
             Material.WHITE_TERRACOTTA, Material.CALCITE, Material.WHITE_CONCRETE,
             Material.QUARTZ_BLOCK, Material.WHITE_CONCRETE_POWDER
@@ -84,7 +87,9 @@ public final class HuecoMundoGenerator extends ChunkGenerator {
 
     @Override
     public org.bukkit.Location getFixedSpawnLocation(org.bukkit.World world, Random random) {
-        return new org.bukkit.Location(world, 0.5, HuecoMundoLayout.GATE.floorY() + 1, 10.5, 180.0f, 0.0f);
+        var gate = HuecoMundoLayout.GATE;
+        return new org.bukkit.Location(world, gate.x() + 0.5, gate.floorY() + 1,
+                gate.z() + HuecoMundoLayout.GATE_ARRIVAL_Z_OFFSET + 0.5, 180.0f, 0.0f);
     }
 
     private void generateLandmarks(ChunkData data, int chunkX, int chunkZ) {
@@ -98,46 +103,104 @@ public final class HuecoMundoGenerator extends ChunkGenerator {
             generateWatchtower(data, chunkX, chunkZ);
         }
         if (HuecoMundoLayout.PALACE.intersectsChunk(chunkX, chunkZ)) {
-            generatePalace(data, chunkX, chunkZ);
+            LasNochesGenerator.generate(data, chunkX, chunkZ);
         }
     }
 
     private void generateGate(ChunkData data, int chunkX, int chunkZ) {
-        int floor = HuecoMundoLayout.GATE.floorY();
-        for (int x = -14; x <= 14; x++) {
-            for (int z = -14; z <= 14; z++) {
-                if (x * x + z * z <= 196) {
-                    Material tile = (Math.abs(x) == Math.abs(z) && Math.abs(x) % 4 == 0)
-                            ? Material.CALCITE : Material.QUARTZ_BLOCK;
-                    put(data, chunkX, chunkZ, x, floor, z, tile);
+        var gate = HuecoMundoLayout.GATE;
+        int courtY = gate.floorY();
+        int deckY = courtY + GATE_PLINTH_HEIGHT;
+        for (int localX = 0; localX < 16; localX++) {
+            int x = Math.abs(chunkX * 16 + localX - gate.x());
+            for (int localZ = 0; localZ < 16; localZ++) {
+                int z = chunkZ * 16 + localZ - gate.z();
+                if (z < -46 || z > 44 || x > 36) {
+                    continue;
+                }
+
+                boolean onPlinth = z >= -35 && z <= -8;
+                int courtEdge = z <= 14 ? 36 : Math.max(15, 50 - z);
+                if (x <= courtEdge) {
+                    Material tile = x == courtEdge ? Material.POLISHED_BLACKSTONE
+                            : x <= 10 && (x == 10 || z % 8 == 0) ? Material.SMOOTH_QUARTZ
+                            : x <= 10 ? Material.QUARTZ_BLOCK : Material.QUARTZ_BRICKS;
+                    data.setBlock(localX, courtY, localZ, tile);
+                }
+                if (onPlinth) {
+                    data.setRegion(localX, courtY + 1, localZ, localX + 1, deckY, localZ + 1,
+                            z == -8 || x == 36 ? Material.POLISHED_BLACKSTONE_BRICKS : Material.CALCITE);
+                    data.setBlock(localX, deckY, localZ, Material.QUARTZ_BRICKS);
+                } else if (x <= 16 && z >= -7 && z <= 4) {
+                    buildGateStairs(data, localX, localZ, x, 5 - z, courtY);
+                } else if (x <= 16 && z < -35) {
+                    buildGateStairs(data, localX, localZ, x, z + 47, courtY);
+                }
+
+                if (x >= 18 && z >= -28 && z <= -9) {
+                    buildGateTower(data, localX, localZ, x, z, deckY);
+                } else if (x < 18 && z >= -25 && z <= -11) {
+                    buildGateArch(data, localX, localZ, x, z, deckY);
+                }
+                if (x == 12 && (z == 10 || z == 20 || z == 30 || z == 40)) {
+                    data.setBlock(localX, courtY + 1, localZ, Material.POLISHED_BLACKSTONE);
+                    data.setBlock(localX, courtY + 2, localZ, Material.QUARTZ_PILLAR);
+                    data.setBlock(localX, courtY + 3, localZ, Material.SOUL_LANTERN);
                 }
             }
         }
-        for (int side : new int[] {-1, 1}) {
-            for (int dx = 0; dx < 2; dx++) {
-                int x = side * (5 + dx);
-                for (int y = floor + 1; y <= floor + 10; y++) {
-                    for (int z = -2; z <= 2; z++) {
-                        put(data, chunkX, chunkZ, x, y, z,
-                                y % 3 == 0 ? Material.CALCITE : Material.POLISHED_BLACKSTONE);
-                    }
-                }
+    }
+
+    private void buildGateStairs(ChunkData data, int localX, int localZ, int x, int halfSteps, int courtY) {
+        int stepY = courtY + halfSteps / 2;
+        if (x >= 15) {
+            data.setRegion(localX, courtY + 1, localZ, localX + 1, stepY + 2, localZ + 1,
+                    Material.POLISHED_BLACKSTONE_BRICKS);
+            data.setBlock(localX, stepY + 2, localZ, Material.SMOOTH_QUARTZ);
+        } else {
+            if (stepY > courtY) {
+                data.setRegion(localX, courtY + 1, localZ, localX + 1, stepY + 1, localZ + 1,
+                        Material.SMOOTH_QUARTZ);
+            }
+            if (halfSteps % 2 != 0) {
+                data.setBlock(localX, stepY + 1, localZ, gateStep);
             }
         }
-        for (int x = -6; x <= 6; x++) {
-            for (int y = floor + 9; y <= floor + 11; y++) {
-                for (int z = -2; z <= 2; z++) {
-                    put(data, chunkX, chunkZ, x, y, z,
-                            (x + y) % 4 == 0 ? Material.CALCITE : Material.POLISHED_BLACKSTONE);
-                }
+    }
+
+    private void buildGateTower(ChunkData data, int localX, int localZ, int x, int z, int deckY) {
+        int fromCenter = Math.abs(x - 26);
+        int depth = Math.abs(2 * z + 37);
+        for (int rise = 1; rise <= 48; rise++) {
+            int inset = rise <= 4 ? -1 : rise <= 30 ? 0 : rise <= 39 ? 2 : rise <= 45 ? 4 : 6;
+            if (fromCenter > 8 - inset || depth > 17 - inset * 2) {
+                continue;
             }
+            boolean front = z == -10 - inset;
+            boolean band = rise == 4 || rise == 29 || rise == 38 || rise == 44 || rise == 48;
+            Material block = band ? Material.CHISELED_QUARTZ_BLOCK : Material.QUARTZ_BRICKS;
+            if (front && !band && (fromCenter == 5 || fromCenter == 7)) {
+                block = Material.QUARTZ_PILLAR;
+            }
+            if (front && fromCenter <= 2 && (rise >= 10 && rise <= 24 || rise >= 32 && rise <= 36)) {
+                block = fromCenter == 0 && rise % 4 == 0 ? Material.SEA_LANTERN : Material.POLISHED_BLACKSTONE;
+            }
+            data.setBlock(localX, deckY + rise, localZ, block);
         }
-        for (int x : new int[] {-8, 8}) {
-            for (int y = floor + 1; y <= floor + 14; y++) {
-                put(data, chunkX, chunkZ, x, y, -2, Material.QUARTZ_PILLAR);
-                put(data, chunkX, chunkZ, x, y, 2, Material.QUARTZ_PILLAR);
+    }
+
+    private void buildGateArch(ChunkData data, int localX, int localZ, int x, int z, int deckY) {
+        // The same profile runs through the wall, so the opening is a walkable passage.
+        int opening = x > 13 ? 0 : 18 + (int) Math.sqrt(196 - x * x);
+        int crown = x <= 3 ? 42 : x <= 8 ? 39 : 36;
+        for (int rise = opening + 1; rise <= crown; rise++) {
+            boolean rim = x >= 14 && x <= 15 && rise <= 24 || x <= 13 && rise <= opening + 2;
+            Material block = rise == crown || rise == 35 || rim ? Material.SMOOTH_QUARTZ
+                    : Material.POLISHED_BLACKSTONE_BRICKS;
+            if (z == -11 && rise > 34 && rise < crown && x + rise - 34 <= 6) {
+                block = x == 0 && rise == 38 ? Material.SEA_LANTERN : Material.CHISELED_QUARTZ_BLOCK;
             }
-            put(data, chunkX, chunkZ, x, floor + 14, 0, Material.SOUL_LANTERN);
+            data.setBlock(localX, deckY + rise, localZ, block);
         }
     }
 
@@ -196,54 +259,6 @@ public final class HuecoMundoGenerator extends ChunkGenerator {
         put(data, chunkX, chunkZ, cx + 4, floor + 18, cz, Material.QUARTZ_PILLAR);
         put(data, chunkX, chunkZ, cx + 5, floor + 19, cz, Material.QUARTZ_PILLAR);
         put(data, chunkX, chunkZ, cx + 6, floor + 20, cz, Material.QUARTZ_PILLAR);
-    }
-
-    private void generatePalace(ChunkData data, int chunkX, int chunkZ) {
-        int cx = HuecoMundoLayout.PALACE.x();
-        int cz = HuecoMundoLayout.PALACE.z();
-        int floor = HuecoMundoLayout.PALACE.floorY();
-        for (int x = -48; x <= 48; x++) {
-            boolean gate = Math.abs(x) <= 8;
-            for (int y = floor + 1; y <= floor + 14; y++) {
-                if (!gate || y > floor + 8) {
-                    put(data, chunkX, chunkZ, cx + x, y, cz - 45,
-                            y % 5 == 0 ? Material.QUARTZ_BLOCK : Material.WHITE_CONCRETE);
-                }
-            }
-        }
-        for (int[] tower : new int[][] {{-48, -45}, {48, -45}, {-48, 45}, {48, 45}}) {
-            int tx = cx + tower[0];
-            int tz = cz + tower[1];
-            for (int y = floor + 1; y <= floor + 31; y++) {
-                int inset = y > floor + 24 ? 1 : 0;
-                for (int x = -4 + inset; x <= 4 - inset; x++) {
-                    for (int z = -4 + inset; z <= 4 - inset; z++) {
-                        if (Math.abs(x) >= 3 - inset || Math.abs(z) >= 3 - inset) {
-                            put(data, chunkX, chunkZ, tx + x, y, tz + z,
-                                    y % 5 == 0 ? Material.QUARTZ_BLOCK : Material.CALCITE);
-                        }
-                    }
-                }
-            }
-        }
-        for (int dx = -HuecoMundoLayout.ARENA_RADIUS; dx <= HuecoMundoLayout.ARENA_RADIUS; dx++) {
-            for (int dz = -HuecoMundoLayout.ARENA_RADIUS; dz <= HuecoMundoLayout.ARENA_RADIUS; dz++) {
-                double radius = Math.hypot(dx, dz);
-                if (radius <= HuecoMundoLayout.ARENA_RADIUS) {
-                    Material tile = Math.abs(radius - 27) < 1.5 ? Material.POLISHED_BLACKSTONE
-                            : (dx + dz) % 9 == 0 ? Material.CALCITE : Material.QUARTZ_BLOCK;
-                    put(data, chunkX, chunkZ, cx + dx, floor, cz + dz, tile);
-                }
-            }
-        }
-        for (int dx = -3; dx <= 3; dx++) {
-            for (int dz = -3; dz <= 3; dz++) {
-                if (Math.abs(dx) == 3 || Math.abs(dz) == 3) {
-                    put(data, chunkX, chunkZ, HuecoMundoLayout.ALTAR_X + dx, floor + 1,
-                            HuecoMundoLayout.ALTAR_Z + dz, Material.BLACKSTONE);
-                }
-            }
-        }
     }
 
     private void put(ChunkData data, int chunkX, int chunkZ, int blockX, int y, int blockZ, Material material) {

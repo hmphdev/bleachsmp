@@ -40,6 +40,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
     private NamespacedKey itemTypeKey;
     private NamespacedKey itemFactionKey;
     private NamespacedKey bossIdKey;
+    private NamespacedKey bossDamageKey;
     private NamespacedKey bossOriginalPersistentKey;
     private StarterItems starterItems;
     private FactionMenu factionMenu;
@@ -51,6 +52,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
         itemTypeKey = new NamespacedKey(this, "item_type");
         itemFactionKey = new NamespacedKey(this, "item_faction");
         bossIdKey = new NamespacedKey(this, "custom_boss_id");
+        bossDamageKey = new NamespacedKey(this, "boss_damage");
         bossOriginalPersistentKey = new NamespacedKey(this, "boss_original_persistent");
         starterItems = new StarterItems(this);
         loadPlayerData();
@@ -101,14 +103,22 @@ public final class BleachSmpPlugin extends JavaPlugin {
         return bossIdKey;
     }
 
+    public NamespacedKey bossDamageKey() {
+        return bossDamageKey;
+    }
+
     public boolean markBoss(org.bukkit.entity.LivingEntity entity, String bossId) {
         if (!BOSS_ID_PATTERN.matcher(bossId).matches()) {
             return false;
         }
         var data = entity.getPersistentDataContainer();
-        if (!data.has(bossIdKey, org.bukkit.persistence.PersistentDataType.STRING)) {
+        String previousId = data.get(bossIdKey, org.bukkit.persistence.PersistentDataType.STRING);
+        if (!data.has(bossOriginalPersistentKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
             data.set(bossOriginalPersistentKey, org.bukkit.persistence.PersistentDataType.BYTE,
                     (byte) (entity.isPersistent() ? 1 : 0));
+        }
+        if (!bossId.equals(previousId)) {
+            data.remove(bossDamageKey);
         }
         data.set(bossIdKey, org.bukkit.persistence.PersistentDataType.STRING, bossId);
         entity.setPersistent(true);
@@ -122,8 +132,11 @@ public final class BleachSmpPlugin extends JavaPlugin {
         }
         var data = entity.getPersistentDataContainer();
         Byte wasPersistent = data.get(bossOriginalPersistentKey, org.bukkit.persistence.PersistentDataType.BYTE);
-        entity.setPersistent(wasPersistent != null && wasPersistent == 1);
+        if (wasPersistent != null) {
+            entity.setPersistent(wasPersistent == 1);
+        }
         data.remove(bossIdKey);
+        data.remove(bossDamageKey);
         data.remove(bossOriginalPersistentKey);
         return true;
     }

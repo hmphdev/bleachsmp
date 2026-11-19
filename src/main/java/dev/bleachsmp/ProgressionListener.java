@@ -1,10 +1,8 @@
 package dev.bleachsmp;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -22,7 +20,6 @@ import org.bukkit.potion.PotionEffectType;
 
 public final class ProgressionListener implements Listener {
     private final BleachSmpPlugin plugin;
-    private final Map<UUID, Map<UUID, Double>> bossDamage = new HashMap<>();
 
     public ProgressionListener(BleachSmpPlugin plugin) {
         this.plugin = plugin;
@@ -60,11 +57,18 @@ public final class ProgressionListener implements Listener {
             return;
         }
 
-        bossDamage.computeIfAbsent(target.getUniqueId(), ignored -> new HashMap<>())
-                .merge(attacker.getUniqueId(), event.getFinalDamage(), Double::sum);
+        var data = target.getPersistentDataContainer();
+        var contributions = data.get(plugin.bossDamageKey(), PersistentDataType.TAG_CONTAINER);
+        if (contributions == null) {
+            contributions = data.getAdapterContext().newPersistentDataContainer();
+        }
+        NamespacedKey attackerKey = contributionKey(attacker);
+        double totalDamage = contributions.getOrDefault(attackerKey, PersistentDataType.DOUBLE, 0.0);
+        contributions.set(attackerKey, PersistentDataType.DOUBLE, totalDamage + event.getFinalDamage());
+        data.set(plugin.bossDamageKey(), PersistentDataType.TAG_CONTAINER, contributions);
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onBossDeath(EntityDeathEvent event) {
         if (!(event.getEntity() instanceof LivingEntity boss)) {
             return;
@@ -74,8 +78,9 @@ public final class ProgressionListener implements Listener {
             return;
         }
 
-        Map<UUID, Double> contributions = bossDamage.remove(boss.getUniqueId());
-        if (contributions == null || contributions.isEmpty()) {
+        var contributions = boss.getPersistentDataContainer().get(plugin.bossDamageKey(),
+                PersistentDataType.TAG_CONTAINER);
+        if (contributions == null) {
             return;
         }
 
@@ -83,15 +88,16 @@ public final class ProgressionListener implements Listener {
         double contributionThreshold = Math.max(0.0,
                 (maxHealth == null ? 20.0 : maxHealth.getValue())
                         * plugin.getConfig().getDouble("progression.boss.minimum-contribution-percent", 0.05));
-        for (Map.Entry<UUID, Double> entry : contributions.entrySet()) {
-            if (entry.getValue() < contributionThreshold) {
-                continue;
-            }
-            Player player = plugin.getServer().getPlayer(entry.getKey());
-            if (player != null) {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            double damage = contributions.getOrDefault(contributionKey(player), PersistentDataType.DOUBLE, 0.0);
+            if (damage > 0.0 && damage >= contributionThreshold) {
                 plugin.awardBossFirstClear(player, bossId);
             }
         }
+    }
+
+    private NamespacedKey contributionKey(Player player) {
+        return new NamespacedKey(plugin, player.getUniqueId().toString());
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)

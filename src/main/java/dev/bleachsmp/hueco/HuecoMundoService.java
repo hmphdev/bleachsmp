@@ -44,6 +44,9 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 public final class HuecoMundoService implements Listener {
     private static final String DEFAULT_WORLD_NAME = "HuecoMundo";
     private static final String GARGANTA_ITEM_ID = "garganta";
+    private static final int GILLIAN_CLEARANCE_RADIUS = 2;
+    private static final int GILLIAN_HEADROOM = (int) Math.ceil(
+            HollowModel.forType(HollowModel.GILLIAN_TYPE).height() * HollowModel.GILLIAN_MAGNIFICATION) + 1;
     private final BleachSmpPlugin plugin;
     private final NamespacedKey itemKey;
     private final NamespacedKey recipeKey;
@@ -51,6 +54,7 @@ public final class HuecoMundoService implements Listener {
     private final Map<UUID, Location> returnLocations = new HashMap<>();
     private final File returnFile;
     private World world;
+    private HollowVisuals hollowVisuals;
 
     public HuecoMundoService(BleachSmpPlugin plugin) {
         this.plugin = plugin;
@@ -88,10 +92,11 @@ public final class HuecoMundoService implements Listener {
         world.setStorm(false);
         world.setClearWeatherDuration(Integer.MAX_VALUE);
         world.setSpawnLocation(HuecoMundoLayout.GATE.x(), HuecoMundoLayout.GATE.floorY() + 1,
-                HuecoMundoLayout.GATE.z() + 10, 180.0f);
+                HuecoMundoLayout.GATE.z() + HuecoMundoLayout.GATE_ARRIVAL_Z_OFFSET, 180.0f);
 
         loadReturnLocations();
         registerGargantaRecipe();
+        hollowVisuals = new HollowVisuals(plugin, world, hollowTypeKey);
         Bukkit.getScheduler().runTaskTimer(plugin, this::spawnHollows, 200L, 200L);
     }
 
@@ -100,6 +105,9 @@ public final class HuecoMundoService implements Listener {
     }
 
     public void shutdown() {
+        if (hollowVisuals != null) {
+            hollowVisuals.shutdown();
+        }
         if (world != null && world.getGenerator() instanceof HuecoMundoGenerator) {
             saveReturnLocations();
             Bukkit.removeRecipe(recipeKey);
@@ -125,8 +133,10 @@ public final class HuecoMundoService implements Listener {
         UUID playerId = player.getUniqueId();
         Location previousReturn = returnLocations.put(playerId, player.getLocation().clone());
         saveReturnLocations();
-        Location destination = new Location(world, HuecoMundoLayout.GATE.x() + 0.5,
-                HuecoMundoLayout.GATE.floorY() + 1, HuecoMundoLayout.GATE.z() + 10.5, 180.0f, 0.0f);
+        var gate = HuecoMundoLayout.GATE;
+        int arrivalZ = gate.z() + HuecoMundoLayout.GATE_ARRIVAL_Z_OFFSET;
+        int groundY = world.getHighestBlockYAt(gate.x(), arrivalZ, HeightMap.MOTION_BLOCKING_NO_LEAVES);
+        Location destination = new Location(world, gate.x() + 0.5, groundY + 1, arrivalZ + 0.5, 180.0f, 0.0f);
         if (!player.teleport(destination)) {
             if (previousReturn == null) {
                 returnLocations.remove(playerId);
@@ -220,16 +230,17 @@ public final class HuecoMundoService implements Listener {
             if (countTaggedHollows(world, player.getLocation(), 48) >= maxNearby) {
                 continue;
             }
-            Location spawnLocation = findSpawnLocation(player.getLocation());
+            String type = rollHollowType();
+            Location spawnLocation = findSpawnLocation(player.getLocation(), type);
             if (spawnLocation == null) {
                 continue;
             }
-            spawnHollow(spawnLocation);
+            spawnHollow(spawnLocation, type);
             total++;
         }
     }
 
-    private Location findSpawnLocation(Location center) {
+    private Location findSpawnLocation(Location center, String type) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         for (int attempt = 0; attempt < 16; attempt++) {
             double angle = random.nextDouble(0, Math.PI * 2);
@@ -240,35 +251,58 @@ public final class HuecoMundoService implements Listener {
                 continue;
             }
             int y = world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
-            if (y <= world.getMinHeight() || y + 5 >= world.getMaxHeight()) {
+            if (y <= world.getMinHeight() || !world.getBlockAt(x, y, z).getType().isSolid()) {
                 continue;
             }
-            Material ground = world.getBlockAt(x, y, z).getType();
-            if (!ground.isSolid() || !hasHollowHeadroom(x, y, z)) {
-                continue;
+            Location feet = new Location(world, x + 0.5, y + 1, z + 0.5);
+            if (HollowModel.GILLIAN_TYPE.equals(type) ? hasGillianClearance(feet)
+                    : hasClearColumn(world, x, y + 1, z, 5)) {
+                return feet;
             }
-            return new Location(world, x + 0.5, y + 1, z + 0.5);
         }
         return null;
     }
 
-    private boolean hasHollowHeadroom(int x, int groundY, int z) {
-        for (int offset = 1; offset <= 5; offset++) {
-            if (!world.getBlockAt(x, groundY + offset, z).getType().isAir()) {
+    static boolean hasGillianClearance(Location feet) {
+        World world = feet.getWorld();
+        int minX = (int) Math.floor(feet.getX() - GILLIAN_CLEARANCE_RADIUS);
+        int maxX = (int) Math.floor(feet.getX() + GILLIAN_CLEARANCE_RADIUS);
+        int minZ = (int) Math.floor(feet.getZ() - GILLIAN_CLEARANCE_RADIUS);
+        int maxZ = (int) Math.floor(feet.getZ() + GILLIAN_CLEARANCE_RADIUS);
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                if (!hasClearColumn(world, x, feet.getBlockY(), z, GILLIAN_HEADROOM)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasClearColumn(World world, int x, int y, int z, int height) {
+        if (y < world.getMinHeight() || y + height > world.getMaxHeight()
+                || !world.isChunkLoaded(x >> 4, z >> 4)) {
+            return false;
+        }
+        for (int offset = 0; offset < height; offset++) {
+            if (!world.getBlockAt(x, y + offset, z).getType().isAir()) {
                 return false;
             }
         }
         return true;
     }
 
-    private void spawnHollow(Location location) {
+    private String rollHollowType() {
         int roll = ThreadLocalRandom.current().nextInt(100);
         int vastoWeight = Math.min(100,
                 Math.max(0, plugin.getConfig().getInt("hueco-mundo.hollows.vasto-lorde-weight", 4)));
         int adjuchasWeight = Math.min(100 - vastoWeight,
                 Math.max(0, plugin.getConfig().getInt("hueco-mundo.hollows.adjuchas-weight", 22)));
-        String type = roll < vastoWeight ? "vasto_lorde"
-                : roll < vastoWeight + adjuchasWeight ? "adjuchas" : "gillian";
+        return roll < vastoWeight ? "vasto_lorde"
+                : roll < vastoWeight + adjuchasWeight ? "adjuchas" : HollowModel.GILLIAN_TYPE;
+    }
+
+    private void spawnHollow(Location location, String type) {
         LivingEntity hollow;
         if (type.equals("vasto_lorde")) {
             hollow = world.spawn(location, WitherSkeleton.class, CreatureSpawnEvent.SpawnReason.CUSTOM,
@@ -279,6 +313,7 @@ public final class HuecoMundoService implements Listener {
         }
         hollow.getPersistentDataContainer().set(plugin.bossIdKey(), PersistentDataType.STRING, type);
         hollow.getPersistentDataContainer().set(hollowTypeKey, PersistentDataType.STRING, type);
+        hollowVisuals.track(hollow, type);
     }
 
     private void configureHollow(LivingEntity hollow, String type) {
@@ -300,15 +335,17 @@ public final class HuecoMundoService implements Listener {
         double scale = switch (type) {
             case "vasto_lorde" -> 1.35;
             case "adjuchas" -> 1.15;
-            default -> 2.2;
+            default -> HollowModel.GILLIAN_MOB_SCALE;
         };
+        if (HollowModel.GILLIAN_TYPE.equals(type) && hollow instanceof Husk husk) {
+            husk.setAdult();
+        }
         setAttribute(hollow, Attribute.MAX_HEALTH, health);
         setAttribute(hollow, Attribute.ATTACK_DAMAGE, damage);
         setAttribute(hollow, Attribute.SCALE, scale);
         setAttribute(hollow, Attribute.FOLLOW_RANGE, 36.0);
         setAttribute(hollow, Attribute.MOVEMENT_SPEED, type.equals("adjuchas") ? 0.29 : 0.23);
         hollow.setHealth(health);
-        hollow.setPersistent(false);
         hollow.setCanPickupItems(false);
         hollow.customName(Component.text(name, type.equals("vasto_lorde")
                 ? NamedTextColor.DARK_RED : NamedTextColor.GRAY));
