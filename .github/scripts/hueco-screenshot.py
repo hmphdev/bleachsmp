@@ -127,12 +127,20 @@ def main():
     try:
         await_log(server, "paper", "Done (", 180)
         await_log(server, "paper", "BleachSMP enabled", 5)
+        send(server, "execute in minecraft:huecomundo run forceload add -32 -32 47 47")
+        for _ in range(60):
+            send(server, "execute in minecraft:huecomundo if block 0 72 10 minecraft:quartz_block")
+            if "Test passed" in (ROOT / "paper.log").read_text(errors="replace"):
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError("Severed Gate floor did not load")
         client = launch(args, CLIENT, "client")
         await_log(server, "paper", f"{USER} joined the game", 180)
         send(server, f"gamemode spectator {USER}")
         send(server, f"execute in minecraft:huecomundo run tp {USER} 13.5 76.0 25.5 151 4")
         await_log(server, "paper", f"Teleported {USER}", 30)
-        time.sleep(12)
+        time.sleep(25)
         windows = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--name", "Minecraft"], text=True)
         subprocess.run(["xdotool", "windowfocus", windows.splitlines()[-1], "key", "F1", "sleep", "1", "key", "F2"], check=True)
         for _ in range(20):
