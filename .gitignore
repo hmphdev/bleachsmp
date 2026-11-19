@@ -1,0 +1,5 @@
+/target/
+/server/
+/paper/
+/__pycache__/
+**/__pycache__/

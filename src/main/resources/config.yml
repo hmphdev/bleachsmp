@@ -1,0 +1,84 @@
+progression:
+  pvp:
+    points-per-kill: 1
+    repeat-kill-cooldown-hours: 24
+  boss:
+    first-clear-points: 3
+    weekly-challenge-points: 2
+    minimum-contribution-percent: 0.05
+  weekly-challenges:
+    - gillian
+    - adjuchas
+    - vasto_lorde
+    - quincy_guardian
+    - soul_reaper_trial
+  ranks:
+    5:
+      points: 0
+      max-health: 20.0
+      titles:
+        SOUL_REAPER: Unseated
+        HOLLOW: Hollow
+        QUINCY: Lichtreich Initiate
+        FULLBRINGER: Fullbringer
+    4:
+      points: 3
+      max-health: 22.0
+      titles:
+        SOUL_REAPER: Seated Officer
+        HOLLOW: Menos
+        QUINCY: Soldat
+        FULLBRINGER: Awakened Fullbringer
+    3:
+      points: 8
+      max-health: 26.0
+      titles:
+        SOUL_REAPER: Lieutenant
+        HOLLOW: Adjuchas
+        QUINCY: Sternritter
+        FULLBRINGER: Xcution Member
+    2:
+      points: 15
+      max-health: 32.0
+      titles:
+        SOUL_REAPER: Captain
+        HOLLOW: Espada
+        QUINCY: Schutzstaffel
+        FULLBRINGER: Xcution Elite
+    1:
+      points: 25
+      max-health: 40.0
+      titles:
+        SOUL_REAPER: Captain-Commander
+        HOLLOW: Primera Espada
+        QUINCY: Quincy Emperor
+        FULLBRINGER: Fullbring Paragon
+  rank-1-max-strength-amplifier: 0
+
+hueco-mundo:
+  world-name: HuecoMundo
+  hollows:
+    max-loaded: 24
+    max-near-player: 4
+    adjuchas-weight: 22
+    vasto-lorde-weight: 4
+
+abilities:
+  SOUL_REAPER:
+    unlock-rank: 4
+    cooldown-seconds: 20
+    damage: 6.0
+  HOLLOW:
+    unlock-rank: 4
+    cooldown-seconds: 15
+    lunge-strength: 1.35
+  QUINCY:
+    unlock-rank: 4
+    cooldown-seconds: 12
+    arrow-speed: 2.8
+    arrow-damage: 7.0
+  FULLBRINGER:
+    unlock-rank: 4
+    cooldown-seconds: 25
+    duration-seconds: 5
+    resistance-amplifier: 0

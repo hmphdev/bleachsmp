@@ -1,0 +1,17 @@
+name: BleachSMP
+version: '0.1.0'
+main: dev.bleachsmp.BleachSmpPlugin
+description: A BLEACH-inspired Paper SMP plugin.
+author: BleachSMP
+api-version: '1.21.11'
+
+commands:
+  bleach:
+    description: View your path, faction choice, ranks, or boss tools.
+    usage: /bleach [status|choose|garganta|boss mark <id>]
+    aliases: [bleachsmp]
+
+permissions:
+  bleachsmp.admin:
+    description: Mark and manage custom boss entities.
+    default: op
