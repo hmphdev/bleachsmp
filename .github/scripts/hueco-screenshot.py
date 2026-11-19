@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import time
 import urllib.request
+import uuid
 
 VERSION = "1.21.11"
 BUILD = 132
@@ -67,7 +68,7 @@ def prepare_client():
         list(pool.map(lambda job: download(*job), jobs))
     (CLIENT / "options.txt").write_text(
         "onboardAccessibility:false\nskipMultiplayerWarning:true\ntutorialStep:none\n"
-        "renderDistance:8\nmaxFps:30\nvsync:false\nguiScale:2\n"
+        "renderDistance:8\nmaxFps:30\nvsync:false\nguiScale:2\ngamma:1.0\n"
     )
     return ["java", "-Xmx2G", "-cp", classpath, version["mainClass"], "--username", USER,
             "--version", VERSION, "--accessToken", "0", "--userType", "legacy",
@@ -81,6 +82,10 @@ def prepare_server():
     download(jar["url"], SERVER / "paper.jar", jar["checksums"]["sha256"], "sha256")
     (SERVER / "plugins").mkdir(exist_ok=True)
     shutil.copy2("target/bleach-smp-0.1.0.jar", SERVER / "plugins")
+    camera_id = uuid.UUID(bytes=hashlib.md5(f"OfflinePlayer:{USER}".encode()).digest(), version=3)
+    data = SERVER / "plugins/BleachSMP"
+    data.mkdir(exist_ok=True)
+    (data / "players.yml").write_text(f"players:\n  {camera_id}:\n    faction: SOUL_REAPER\n")
     (SERVER / "eula.txt").write_text("eula=true\n")
     (SERVER / "server.properties").write_text(
         "server-ip=127.0.0.1\nonline-mode=false\nallow-nether=false\n"
@@ -127,7 +132,7 @@ def main():
         send(server, f"execute as {USER} run bleach garganta")
         time.sleep(10)
         send(server, f"gamemode creative {USER}")
-        send(server, f"execute in minecraft:huecomundo run tp {USER} 13.5 76.0 25.5 151 1")
+        send(server, f"execute as {USER} at @s if dimension minecraft:huecomundo run tp @s 13.5 76.0 25.5 151 4")
         await_log(server, "paper", f"Teleported {USER}", 30)
         time.sleep(12)
         windows = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--name", "Minecraft"], text=True)
