@@ -7,8 +7,12 @@ import org.bukkit.util.Transformation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-/** Geometry is authored in blocks about the mob's feet, with +Z facing forward. */
-record HollowModel(float height, List<Piece> pieces) {
+/**
+ * Geometry is authored in blocks about the mob's feet, with +Z facing forward. The same pieces feed both
+ * the block-display fallback and the resource pack's item models. {@link Layer} marks pieces that only
+ * one of the two shows: the pack can afford far more, finer pieces than block displays can.
+ */
+record HollowModel(String type, float height, List<Piece> pieces, List<Part> parts) {
     static final String GILLIAN_TYPE = "gillian";
     static final float GILLIAN_MAGNIFICATION = 2.5f;
     // The original 2.2x adult husk reached the original mask; grow both together.
@@ -30,6 +34,8 @@ record HollowModel(float height, List<Piece> pieces) {
     private static final HollowModel ADJUCHAS = adjuchas();
     private static final HollowModel VASTO_LORDE = vastoLorde();
 
+    static final List<String> TYPES = List.of(GILLIAN_TYPE, "adjuchas", "vasto_lorde");
+
     static HollowModel forType(String type) {
         return switch (type) {
             case GILLIAN_TYPE -> GILLIAN;
@@ -41,7 +47,7 @@ record HollowModel(float height, List<Piece> pieces) {
 
     /** A towering black shroud, a spiked bone collar and a long-nosed mask: the Menos Grande. */
     private static HollowModel gillian() {
-        Builder b = new Builder(4.35f);
+        Builder b = new Builder(GILLIAN_TYPE, 4.35f);
         b.pivot(Joint.LEFT_ARM, -.5, 3.0, 0).pivot(Joint.RIGHT_ARM, .5, 3.0, 0)
                 .pivot(Joint.HEAD, 0, 3.05, 0).pivot(Joint.TAIL, 0, 1.2, 0);
         // Keep the torso narrow and let long, angled folds carry the silhouette out to the hem.
@@ -89,12 +95,44 @@ record HollowModel(float height, List<Piece> pieces) {
             b.horn(MASK, s * .8, 1.34, .1, 170, s * 20, 0, 1, .28, .07, .03, arm);
             b.horn(MASK, s * .73, 1.34, .14, 165, s * -10, 0, 1, .26, .07, .03, arm);
         }
+        b.detail();
+        // A tattered hem: ragged points of cloth hanging below the robe.
+        for (int i = 0; i < 18; i++) {
+            double yaw = i * 20 + (i % 3) * 4;
+            double r = Math.toRadians(yaw);
+            double length = .22 + (i * 7 % 5) * .05;
+            b.horn(SHADE, Math.sin(r) * .92, .17, Math.cos(r) * .5, 180 - 12, yaw, 0, 1, length, .2, .03, Joint.BODY);
+        }
+        // Smaller spikes between the collar's main ones, and a second, inner row.
+        for (int i = 0; i < 12; i++) {
+            double yaw = i * 30 + 15;
+            double r = Math.toRadians(yaw);
+            b.horn(BONE, Math.sin(r) * .4, 2.98, Math.cos(r) * .32, 50, yaw, 6, 2, .42, .1, .03, Joint.BODY);
+            b.horn(IVORY, Math.sin(r) * .3, 3.02, Math.cos(r) * .25, 32, yaw, 0, 1, .3, .08, .02, Joint.BODY);
+        }
+        // Brow ridge, cheekbones, eye-socket rims and a full row of teeth on the mask.
+        b.box(IVORY, 0, 3.76, .43, .7, .07, .06, -6, 0, 0, Joint.HEAD);
+        for (int s : new int[] {-1, 1}) {
+            b.box(MASK, s * .19, 3.75, .44, .26, .04, .03, -6, 0, s * -14, Joint.HEAD);
+            b.box(MASK, s * .19, 3.575, .44, .24, .035, .03, -6, 0, s * 8, Joint.HEAD);
+            b.box(IVORY, s * .3, 3.42, .43, .1, .3, .05, -6, 0, s * 12, Joint.HEAD);
+        }
+        for (int i = -3; i <= 3; i++) {
+            b.horn(IVORY, i * .055, 3.2, .45, 180, 0, 0, 1, .09, .035, .012, Joint.HEAD);
+            b.horn(IVORY, i * .055 + .027, 3.12, .45, 0, 0, 0, 1, .07, .03, .01, Joint.HEAD);
+        }
+        // Wide sleeve cuffs.
+        for (int s : new int[] {-1, 1}) {
+            Joint arm = s < 0 ? Joint.LEFT_ARM : Joint.RIGHT_ARM;
+            b.box(SHADE, s * .8, 1.82, .06, .32, .2, .36, -10, 0, s * 6, arm);
+            b.box(SLATE, s * .8, 1.73, .06, .34, .04, .38, -10, 0, s * 6, arm);
+        }
         return b.build();
     }
 
     /** A long, low predator: skull-masked, spine-backed, six-limbed, with a hole through its flank. */
     private static HollowModel adjuchas() {
-        Builder b = new Builder(2.23f);
+        Builder b = new Builder("adjuchas", 2.23f);
         b.pivot(Joint.LEFT_ARM, -.38, .95, .55).pivot(Joint.RIGHT_ARM, .38, .95, .55)
                 .pivot(Joint.LEFT_LEG, -.36, .95, -.55).pivot(Joint.RIGHT_LEG, .36, .95, -.55)
                 .pivot(Joint.HEAD, 0, 1.2, .85).pivot(Joint.TAIL, 0, 1.0, -.85);
@@ -137,12 +175,48 @@ record HollowModel(float height, List<Piece> pieces) {
         // A segmented tail ending in a bone stinger.
         b.horn(OBSIDIAN, 0, 1.02, -.84, -70, 0, -10, 3, 1.0, .26, .12, Joint.TAIL);
         b.horn(BONE, 0, 1.19, -1.81, -20, 0, 35, 2, .5, .12, .03, Joint.TAIL);
+        b.detail();
+        // Ribs curling down both flanks from the spine.
+        for (int s : new int[] {-1, 1}) {
+            for (int i = 0; i < 5; i++) {
+                double z = .62 - i * .28;
+                b.horn(i % 2 == 0 ? IVORY : BONE, s * .3, 1.33, z, 112, s * 90, 22, 3, .5 - i * .03, .07, .03,
+                        Joint.BODY);
+            }
+        }
+        // Vertebrae along the back, between the big spines.
+        for (int i = 0; i < 9; i++) {
+            b.box(BONE, 0, 1.4, .74 - i * .19, .14, .07, .1, -3, 45, 0);
+        }
+        // Teeth along both jaws.
+        for (int s : new int[] {-1, 1}) {
+            for (int i = 0; i < 4; i++) {
+                b.horn(IVORY, s * .13, 1.12, 1.25 + i * .09, 180, 0, 0, 1, .08, .03, .01, Joint.HEAD);
+                b.horn(IVORY, s * .12, 1.04, 1.29 + i * .09, 0, 0, 0, 1, .06, .025, .01, Joint.HEAD);
+            }
+        }
+        // Three claws on every foot.
+        for (int s : new int[] {-1, 1}) {
+            for (int front = 0; front <= 1; front++) {
+                Joint joint = front == 1 ? (s < 0 ? Joint.LEFT_ARM : Joint.RIGHT_ARM)
+                        : (s < 0 ? Joint.LEFT_LEG : Joint.RIGHT_LEG);
+                double z = (front == 1 ? .55 : -.55) + (front == 1 ? .2 : -.06) + .17;
+                for (int c = -1; c <= 1; c++) {
+                    b.horn(IVORY, s * .62 + c * .07, .06, z, 100, c * 12, 25, 2, .16, .05, .015, joint);
+                }
+            }
+        }
+        // Wicked hooks on the scythe arms.
+        for (int s : new int[] {-1, 1}) {
+            Joint arm = s < 0 ? Joint.LEFT_ARM : Joint.RIGHT_ARM;
+            b.horn(IVORY, s * .74, 1.6, 1.05, 150, s * 20, 20, 3, .35, .06, .015, arm);
+        }
         return b.build();
     }
 
     /** A lean, white, humanoid apex Hollow: long forward-swept horns, a fur mane and a hole in its chest. */
     private static HollowModel vastoLorde() {
-        Builder b = new Builder(3.24f);
+        Builder b = new Builder("vasto_lorde", 3.24f);
         b.pivot(Joint.LEFT_ARM, -.42, 2.33, 0).pivot(Joint.RIGHT_ARM, .42, 2.33, 0)
                 .pivot(Joint.LEFT_LEG, -.17, 1.38, 0).pivot(Joint.RIGHT_LEG, .17, 1.38, 0)
                 .pivot(Joint.HEAD, 0, 2.5, 0).pivot(Joint.TAIL, 0, 2.6, -.18);
@@ -202,6 +276,34 @@ record HollowModel(float height, List<Piece> pieces) {
         for (int s : new int[] {-1, 1}) {
             b.horn(SHADE, s * .12, 2.86, -.2, 165, 180 + s * 12, -6, 3, 1.0, .2, .08, Joint.TAIL);
         }
+        b.detail();
+        // A shaggy mane: tufts standing out around the neck and shoulders, and more hair down the back.
+        for (int i = 0; i < 16; i++) {
+            double yaw = i * 22.5;
+            double r = Math.toRadians(yaw);
+            boolean back = Math.cos(r) < 0;
+            b.horn(i % 4 == 0 ? SCAR : SHADE, Math.sin(r) * .34, 2.36, Math.cos(r) * .2, back ? 70 : 55, yaw,
+                    10, 2, .26 + (i % 3) * .05, .1, .02, Joint.BODY);
+        }
+        for (int i = -2; i <= 2; i++) {
+            b.horn(SHADE, i * .07, 2.8, -.22, 168, 180 + i * 6, -4, 3, .85 + Math.abs(i) * .05 * -1, .1, .03,
+                    Joint.TAIL);
+        }
+        // Fur at the wrists and ankles, knee guards, and a split at the mask's brow.
+        for (int s : new int[] {-1, 1}) {
+            Joint arm = s < 0 ? Joint.LEFT_ARM : Joint.RIGHT_ARM;
+            Joint leg = s < 0 ? Joint.LEFT_LEG : Joint.RIGHT_LEG;
+            for (int i = 0; i < 6; i++) {
+                double yaw = i * 60;
+                double r = Math.toRadians(yaw);
+                b.horn(SHADE, s * .51 + Math.sin(r) * .1, 1.36, .04 + Math.cos(r) * .1, 120, yaw, 0, 1, .14, .07, .02,
+                        arm);
+                b.horn(SHADE, s * .19 + Math.sin(r) * .13, .26, .02 + Math.cos(r) * .13, 110, yaw, 0, 1, .12, .07,
+                        .02, leg);
+            }
+            b.box(MASK, s * .18, .82, .16, .2, .18, .06, 8, 0, 0, leg);
+            b.box(SHADE, s * .05, 2.86, .24, .015, .14, .012, 0, 0, s * 20, Joint.HEAD);
+        }
         return b.build();
     }
 
@@ -216,14 +318,39 @@ record HollowModel(float height, List<Piece> pieces) {
         }
     }
 
-    record Piece(Material material, Vector3f center, Vector3f size, Quaternionf rotation, Joint joint, Vector3f pivot) {
+    enum Layer { BOTH, BLOCKS, MODEL }
+
+    /** Pieces shown as block displays to players without the resource pack. */
+    List<Piece> blockPieces() {
+        return pieces.stream().filter(piece -> piece.layer() != Layer.MODEL).toList();
+    }
+
+    /** Pieces in the resource pack's item models. */
+    List<Piece> modelPieces() {
+        return pieces.stream().filter(piece -> piece.layer() != Layer.BLOCKS).toList();
+    }
+
+    /** Rotation of a joint for an animation swing, shared by both renderers. */
+    static Quaternionf jointRotation(Joint joint, float swing) {
+        Quaternionf rotation = new Quaternionf();
+        return joint == Joint.TAIL ? rotation.rotateY(swing) : rotation.rotateX(swing);
+    }
+
+    /**
+     * One item model per joint. Its elements are stored relative to {@code pivot}, shrunk by {@code scale}
+     * so they fit the resource pack's -16..32 model bounds.
+     */
+    record Part(Joint joint, Vector3f pivot, float scale, List<Piece> pieces) {
+        Transformation pose(float magnification, float lift, float swing) {
+            return new Transformation(new Vector3f(pivot).mul(magnification).add(0, lift, 0),
+                    jointRotation(joint, swing), new Vector3f(scale * magnification), new Quaternionf());
+        }
+    }
+
+    record Piece(Material material, Vector3f center, Vector3f size, Quaternionf rotation, Joint joint, Vector3f pivot,
+            Layer layer) {
         Transformation pose(float scale, float lift, float swing) {
-            Quaternionf jointRotation = new Quaternionf();
-            if (joint == Joint.TAIL) {
-                jointRotation.rotateY(swing);
-            } else {
-                jointRotation.rotateX(swing);
-            }
+            Quaternionf jointRotation = jointRotation(joint, swing);
             Vector3f corner = new Vector3f(size).mul(-.5f).rotate(rotation).add(center)
                     .sub(pivot).rotate(jointRotation).add(pivot).mul(scale).add(0, lift, 0);
             return new Transformation(corner, jointRotation.mul(rotation), new Vector3f(size).mul(scale),
@@ -236,12 +363,21 @@ record HollowModel(float height, List<Piece> pieces) {
     }
 
     private static final class Builder {
+        private final String type;
         private final float height;
+        private Layer layer = Layer.BOTH;
         private final List<Piece> pieces = new ArrayList<>();
         private final java.util.Map<Joint, Vector3f> pivots = new java.util.EnumMap<>(Joint.class);
 
-        private Builder(float height) {
+        private Builder(String type, float height) {
+            this.type = type;
             this.height = height;
+        }
+
+        /** Pieces added after this are too fine for block displays and only go in the resource pack. */
+        private Builder detail() {
+            layer = Layer.MODEL;
+            return this;
         }
 
         private Builder pivot(Joint joint, double x, double y, double z) {
@@ -260,7 +396,7 @@ record HollowModel(float height, List<Piece> pieces) {
                     (float) Math.toRadians(pitch), (float) Math.toRadians(roll));
             pieces.add(new Piece(material, new Vector3f((float) x, (float) y, (float) z),
                     new Vector3f((float) w, (float) h, (float) d), rotation, joint,
-                    pivots.getOrDefault(joint, joint.pivot)));
+                    pivots.getOrDefault(joint, joint.pivot), layer));
         }
 
         /**
@@ -270,6 +406,22 @@ record HollowModel(float height, List<Piece> pieces) {
          */
         private void horn(Material material, double x, double y, double z, double tilt, double yaw, double bend,
                 int segments, double length, double startWidth, double endWidth, Joint joint) {
+            Layer outer = layer;
+            if (outer == Layer.BOTH) {
+                // Block displays keep the few chunky segments; the pack gets a smooth, sharper taper.
+                layer = Layer.BLOCKS;
+                hornSegments(material, x, y, z, tilt, yaw, bend, segments, length, startWidth, endWidth, joint);
+            }
+            layer = Layer.MODEL;
+            int smooth = Math.max(4, segments * 4);
+            double totalBend = bend * segments;
+            hornSegments(material, x, y, z, tilt - bend / 2 + totalBend / smooth / 2, yaw, totalBend / smooth, smooth,
+                    length, startWidth, endWidth * .55, joint);
+            layer = outer;
+        }
+
+        private void hornSegments(Material material, double x, double y, double z, double tilt, double yaw,
+                double bend, int segments, double length, double startWidth, double endWidth, Joint joint) {
             double step = length / segments;
             double t = tilt;
             for (int i = 0; i < segments; i++) {
@@ -312,7 +464,24 @@ record HollowModel(float height, List<Piece> pieces) {
         }
 
         private HollowModel build() {
-            return new HollowModel(height, List.copyOf(pieces));
+            List<Part> parts = new ArrayList<>();
+            for (Joint joint : Joint.values()) {
+                List<Piece> members = pieces.stream()
+                        .filter(piece -> piece.joint() == joint && piece.layer() != Layer.BLOCKS).toList();
+                if (members.isEmpty()) {
+                    continue;
+                }
+                Vector3f pivot = pivots.getOrDefault(joint, joint.pivot);
+                // Item model elements must stay within 1.5 model-blocks of the model's centre.
+                float reach = 0;
+                for (Piece piece : members) {
+                    Vector3f offset = new Vector3f(piece.center()).sub(pivot).absolute();
+                    reach = Math.max(reach, Math.max(offset.x, Math.max(offset.y, offset.z))
+                            + Math.max(piece.size().x, Math.max(piece.size().y, piece.size().z)) * .5f);
+                }
+                parts.add(new Part(joint, new Vector3f(pivot), Math.max(1, reach / 1.45f), members));
+            }
+            return new HollowModel(type, height, List.copyOf(pieces), List.copyOf(parts));
         }
     }
 }

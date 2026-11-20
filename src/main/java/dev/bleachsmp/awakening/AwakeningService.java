@@ -37,6 +37,7 @@ public final class AwakeningService {
     private final NamespacedKey releaseReadyKey;
     private final NamespacedKey concealedUntilKey;
     private final NamespacedKey dormantKey;
+    private final VfxPreview preview;
     private final NamespacedKey[] habitKeys = new NamespacedKey[Habit.values().length];
 
     public AwakeningService(BleachSmpPlugin plugin) {
@@ -48,6 +49,7 @@ public final class AwakeningService {
         canon = new CanonMoves(plugin, this, releases);
         bankai = new BankaiService(plugin, this);
         pressure = new PressureService(plugin, this);
+        preview = new VfxPreview(this);
         firstKey = new NamespacedKey(plugin, "first_awakening");
         advancedKey = new NamespacedKey(plugin, "advanced_awakening");
         firstTraitKey = new NamespacedKey(plugin, "first_awakening_trait");
@@ -64,6 +66,14 @@ public final class AwakeningService {
 
     public ReleaseService releases() {
         return releases;
+    }
+
+    public VfxPreview preview() {
+        return preview;
+    }
+
+    BleachSmpPlugin plugin() {
+        return plugin;
     }
 
     public CrisisService crisis() {

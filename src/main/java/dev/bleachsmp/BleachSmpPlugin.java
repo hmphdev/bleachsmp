@@ -7,7 +7,11 @@ import dev.bleachsmp.command.BleachCommand;
 import dev.bleachsmp.faction.Faction;
 import dev.bleachsmp.faction.FactionMenu;
 import dev.bleachsmp.item.StarterItems;
+import dev.bleachsmp.fx.Vfx;
+import dev.bleachsmp.fx.VfxAssets;
+import dev.bleachsmp.hueco.HollowPackAssets;
 import dev.bleachsmp.hueco.HuecoMundoService;
+import dev.bleachsmp.pack.ResourcePackService;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
@@ -48,6 +52,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
     private FactionMenu factionMenu;
     private HuecoMundoService huecoMundo;
     private AwakeningService awakenings;
+    private ResourcePackService resourcePacks;
 
     @Override
     public void onEnable() {
@@ -74,6 +79,10 @@ public final class BleachSmpPlugin extends JavaPlugin {
         awakenings.crisis().start();
         getServer().getPluginManager().registerEvents(awakenings.pressure(), this);
         awakenings.pressure().start();
+        Map<String, byte[]> packFiles = new HashMap<>(HollowPackAssets.files());
+        packFiles.putAll(VfxAssets.files());
+        resourcePacks = new ResourcePackService(this, packFiles);
+        Vfx.init(this, resourcePacks);
         huecoMundo = new HuecoMundoService(this);
         getServer().getPluginManager().registerEvents(huecoMundo, this);
         huecoMundo.initialize();
@@ -102,6 +111,14 @@ public final class BleachSmpPlugin extends JavaPlugin {
         if (huecoMundo != null) {
             huecoMundo.shutdown();
         }
+        Vfx.shutdown();
+        if (resourcePacks != null) {
+            resourcePacks.shutdown();
+        }
+    }
+
+    public ResourcePackService resourcePacks() {
+        return resourcePacks;
     }
 
     public HuecoMundoService huecoMundo() {

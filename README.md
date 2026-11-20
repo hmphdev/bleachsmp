@@ -43,7 +43,35 @@ The first time each player arrives through a Garganta after installing this feat
 
 Head north from the Severed Gate toward Las Noches at X 0, Z -384. The south causeway leads through the fortress wall into a lantern-lit courtyard with an arena ring and a walkable domed keep.
 
-Hueco Mundo's Hollows have animated models that work on vanilla clients without a resource pack: the Gillian is an 11-block-tall cloaked giant that spawns in open terrain, the Adjuchas is a six-limbed dune hunter, and the Vasto Lorde has a split mask, a horned crown, and blade-like arms. Aim at the creature's body rather than its decorative extremities: combat still uses the underlying mob's hitbox.
+Hueco Mundo's Hollows have animated models: the Gillian is an 11-block-tall cloaked giant that spawns in open terrain, the Adjuchas is a six-limbed dune hunter, and the Vasto Lorde has a split mask, a horned crown, and blade-like arms. Aim at the creature's body rather than its decorative extremities: combat still uses the underlying mob's hitbox.
+
+### Hollow models and the resource pack
+
+The plugin builds its own resource pack at startup and offers it to every player on join. With it, each Hollow is a set of textured 3D models, one per limb, animated the same way as before. They have painted bone, cloth and mask textures, glowing eyes, smooth curved horns, and detail that block displays can't carry: the Gillian's tattered hem, collar spikes and teeth, the Adjuchas's ribs, vertebrae and claws, and the Vasto Lorde's mane and fur cuffs. Players who decline the pack, or whose download fails, see the original block-built Hollows instead. Each player only ever sees one of the two.
+
+The pack is generated from the same geometry as the block version (`HollowModel`, painted by `HollowPackAssets`), so changing a Hollow's shape updates both. By default the server hosts the pack itself over HTTP on port 8163. Open that TCP port on your host or firewall. If you can't, upload `plugins/BleachSMP/BleachSMP-resources.zip` somewhere public (it is rewritten on every start) and set its link as `resource-pack.url`. Re-upload it whenever you update the plugin, or the hash check will fail and players fall back to block Hollows. The `resource-pack` section of `config.yml` also sets the public host, whether the pack is required, and its prompt.
+
+To see the models in the real client, run `.github/scripts/hollow-screenshot.py` under a virtual display (as the screenshot workflow does). It photographs each Hollow from several angles into `target/hueco-capture/hollows/`. Pass `--no-pack` to photograph the block fallback.
+
+### Ability effects
+
+The same resource pack carries the ability effects. For players with it, the shared effect helpers draw glowing, animated 3D effects instead of particle dots. Every move that uses them gets the new look:
+
+- **Slashes** are diagonal crescents of light with a white-hot edge that leave a fading trail as they travel. Hollow waves are three claw marks.
+- **Beams and ceros** charge as a swelling orb at the muzzle, then fire a thick beam with a white core that thins out behind the shot. They end in a flash and a shockwave.
+- **Shockwaves** are rings of light racing across the ground. **Bursts** are star flashes, and big ones swell an orb of energy.
+- **Lines and tethers** become beams of light. Projectiles and dashes leave glowing streaks.
+
+Releases and advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) also get their own effects:
+
+- **First release:** Soul Reapers rise in a spiral inside a column of reiatsu. Hollows burn in soul-fire under a dark column. Quincy are ringed by six shafts of light. Fullbringers spin rings of power around their focus.
+- **Advanced entrance:** a jagged bolt strikes from the sky and a ten-block pillar of reiatsu rises around the user, spinning. Soul Reapers and Hollows get a dark core inside it. Then come a double shockwave and a scorched, cracked crater that lingers for ten seconds.
+- **Advanced aura:** Quincy grow two flapping wings of light, Hollows grow bone horns and smoulder with soul-fire, Fullbringers are circled by four glowing armour plates, and Soul Reapers burn with black-and-colour reiatsu flames. Every released form also wears a faint, turning sheath of reiatsu.
+- **Ultimates:** lightning storms strike as real bolts that leave scorch marks. The tempest is a funnel of spinning wind bands. World Breaker cracks the ground and sends shockwaves out with each ring of pillars. Sanctum raises a dome of light with turning rings.
+
+Effects are tinted to each form's colour, glow at full brightness, and fade out smoothly. Players without the pack see the original particles, and pack users don't see doubled particles. Effects are short-lived display entities that are never saved, and at most 700 exist at once.
+
+Admins can preview any form's effects without unlocking it, using `/bleach vfx release <first|advanced> [faction] [playstyle]`, `/bleach vfx use <main|second|ultimate>`, `/bleach vfx seal`, and `/bleach vfx demo` (every base effect in a row). `.github/scripts/vfx-screenshot.py` uses these to photograph each faction's advanced release in the real client.
 
 ### Garganta tears
 
@@ -105,7 +133,7 @@ The Vasto Lorde is the apex Hollow and a server-wide event, not a random spawn. 
 
 Admins can summon one for testing with `/bleach boss vasto` while standing in Hueco Mundo. Tune everything under `hueco-mundo.vasto-lorde` in `config.yml`.
 
-Other future work includes additional boss encounters, death recovery, the Rank 0 event role, and the server resource pack/custom weapon models. Configure rank thresholds, faction titles, ability unlocks and cooldowns, PvP cooldowns, boss contribution, rewards, and the weekly challenge rotation in `plugins/BleachSMP/config.yml`.
+Other future work includes additional boss encounters, death recovery, the Rank 0 event role, and custom weapon models in the resource pack. Configure rank thresholds, faction titles, ability unlocks and cooldowns, PvP cooldowns, boss contribution, rewards, and the weekly challenge rotation in `plugins/BleachSMP/config.yml`.
 
 ## Playstyle awakenings
 

@@ -101,7 +101,7 @@ public final class HuecoMundoService implements Listener {
         loadReturnLocations();
         registerGargantaRecipe();
         Bukkit.getPluginManager().registerEvents(arrivalIntro, plugin);
-        hollowVisuals = new HollowVisuals(plugin, world, hollowTypeKey);
+        hollowVisuals = new HollowVisuals(plugin, world, hollowTypeKey, plugin.resourcePacks());
         vastoLorde = new VastoLordeBoss(plugin, this);
         tears = new GargantaTears(plugin, this);
         Bukkit.getPluginManager().registerEvents(tears, plugin);

@@ -3,6 +3,7 @@ package dev.bleachsmp.awakening;
 import dev.bleachsmp.BleachSmpPlugin;
 import dev.bleachsmp.faction.Faction;
 import dev.bleachsmp.fx.Vfx;
+import dev.bleachsmp.fx.VfxKind;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -396,6 +397,22 @@ public final class ReleaseService implements Listener {
     /** The first second after a release: each faction gets its own rising effect. */
     private void releaseAnimation(Player player, Form form, Theme theme) {
         player.getWorld().spawnParticle(Particle.SONIC_BOOM, player.getLocation().add(0, 1, 0), 1);
+        Location start = player.getLocation();
+        switch (theme) {
+            case SOUL_REAPER -> {
+                Vfx.helix(plugin, player, form.color(), 20, 3, 1.1);
+                Vfx.pillar(start, form.color(), 1.3, 4.5, 10, 8);
+            }
+            case HOLLOW -> Vfx.pillar(start, Color.fromRGB(40, 20, 52), 1.7, 3.6, 8, 10);
+            case QUINCY -> {
+                // Six shafts of light around the archer.
+                for (int i = 0; i < 6; i++) {
+                    double a = i * (Math.PI / 3);
+                    Vfx.pillar(start.clone().add(Math.cos(a) * 1.8, 0, Math.sin(a) * 1.8), form.color(), .28, 3.4, 14, 6);
+                }
+            }
+            case FULLBRINGER -> Vfx.helix(plugin, player, form.color(), 20, 4, 1.6);
+        }
         new BukkitRunnable() {
             int tick;
 
@@ -416,6 +433,13 @@ public final class ReleaseService implements Listener {
                         }
                     }
                     case HOLLOW -> {
+                        if (tick % 2 == 0) {
+                            // Soul-fire licking up around the feet.
+                            ThreadLocalRandom random = ThreadLocalRandom.current();
+                            double a = random.nextDouble(Math.PI * 2);
+                            Vfx.flame(base.clone().add(Math.cos(a) * .7, 0, Math.sin(a) * .7),
+                                    tick % 4 == 0 ? form.color() : Color.fromRGB(90, 200, 230), 1.4 + random.nextDouble(), 12);
+                        }
                         world.spawnParticle(Particle.SOUL_FIRE_FLAME, base.clone().add(0, tick * 0.12, 0), 6,
                                 0.45, 0.2, 0.45, 0.02);
                         world.spawnParticle(Particle.LARGE_SMOKE, base.clone().add(0, 0.4, 0), 2, 0.6, 0.2, 0.6, 0.01);
@@ -447,6 +471,9 @@ public final class ReleaseService implements Listener {
                                     Math.sin(a) * r), 1, 0, 0, 0, 0, form.dust(1.4f));
                         }
                         world.spawnParticle(Particle.ENCHANT, hand, 10, 0.8, 0.8, 0.8, 0.6);
+                        if (tick % 5 == 0) {
+                            Vfx.burst(hand, form.color(), 6, 0.1 + tick * 0.01, 1.0f);
+                        }
                         if (tick == 20) {
                             world.spawnParticle(Particle.TOTEM_OF_UNDYING, hand, 40, 0.3, 0.4, 0.3, 0.4);
                         }
@@ -460,6 +487,13 @@ public final class ReleaseService implements Listener {
     private static void aura(Player player, Release release, int tick) {
         Location base = player.getLocation();
         var world = base.getWorld();
+        // A faint, slowly turning sheath of reiatsu for players with the resource pack.
+        double sheath = release.advanced ? 1.15 : .9;
+        Vfx.keep("sheath:" + player.getUniqueId(), 6, () -> Vfx.model(VfxKind.AURA, base, release.form.color())
+                        .follow(player, new Vector()).tone(release.advanced ? 1 : 2)
+                        .pose(new Quaternionf(), Vfx.scale(sheath, 2.3, sheath)))
+                .move(2, new Vector3f(), new Quaternionf().rotateY(tick * .09f),
+                        Vfx.scale(sheath + Math.sin(tick * .2) * .06, 2.2 + Math.sin(tick * .13) * .15, sheath));
         release.element.aura(base, tick, release.advanced);
         for (int i = 0; i < 2; i++) {
             double a = tick * 0.35 + i * Math.PI;
@@ -932,6 +966,25 @@ public final class ReleaseService implements Listener {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    /** One length of a fired beam: a white core inside the form's colour, swelling then thinning out. */
+    private static void beamSegment(Location from, Location to, Color color, double width) {
+        Vector span = to.toVector().subtract(from.toVector());
+        double length = span.length();
+        if (length < .05) {
+            return;
+        }
+        Quaternionf aim = Vfx.facing(span);
+        Vfx.model(VfxKind.BEAM, from, color)
+                .pose(aim, Vfx.scale(width * .6, width * .6, length + .05))
+                .to(1, 2, aim, Vfx.scale(width, width, length + .05))
+                .to(4, 7, aim, Vfx.scale(width * .15, width * .15, length + .05))
+                .life(11, 6);
+        Vfx.model(VfxKind.BEAM, from, Color.WHITE)
+                .pose(aim, Vfx.scale(width * .35, width * .35, length + .05))
+                .to(3, 6, aim, Vfx.scale(width * .05, width * .05, length + .05))
+                .life(9, 5);
+    }
+
     private LivingEntity aimedEnemy(Player player, double range) {
         var result = player.getWorld().rayTraceEntities(player.getEyeLocation(), player.getEyeLocation().getDirection(),
                 range, 0.6, entity -> entity instanceof LivingEntity && !entity.equals(player));
@@ -1011,20 +1064,32 @@ public final class ReleaseService implements Listener {
             case SOUL_REAPER -> Vfx.sound(origin, Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 0.7f);
         }
         Vfx.burst(origin.clone().add(forward), release.form.color(), cero ? 20 : 8, 0.15, 1.6f);
+        // Energy gathers at the muzzle before it fires: a cero charges for a moment.
+        Vfx.model(VfxKind.ORB, origin.clone().add(forward), release.form.color())
+                .pose(new Quaternionf(), Vfx.scale(.1))
+                .to(1, cero ? 4 : 1, new Quaternionf().rotateY(1.5f).rotateX(.7f), Vfx.scale(cero ? 1.1 : .55))
+                .grow(cero ? 6 : 3, 4, Vfx.scale(.05))
+                .life(cero ? 11 : 7, 3);
+        double beamWidth = cero ? 1.15 : .45;
         int speed = cero ? 4 : 3;
         new BukkitRunnable() {
             int step;
 
             @Override
             public void run() {
+                Location from = origin.clone().add(forward.clone().multiply(1 + step * speed));
                 for (int sub = 0; sub < speed; sub++) {
                     Location point = origin.clone().add(forward.clone().multiply(1 + step * speed + sub));
                     if (sub == 0) {
                         trailPatch(player, release, groundAt(point));
                     }
                     accent(release, point, 1, 0, 0, 0, 0);
-                    point.getWorld().spawnParticle(Particle.DUST, point, cero ? 6 : 2, cero ? 0.22 : 0.08,
-                            cero ? 0.22 : 0.08, cero ? 0.22 : 0.08, 0, release.form.dust(cero ? 2.0f : 1.4f));
+                    Particle.DustOptions dust = release.form.dust(cero ? 2.0f : 1.4f);
+                    for (int d = 0; d < (cero ? 6 : 2); d++) {
+                        Vfx.fallbackDust(point.clone().add(ThreadLocalRandom.current().nextGaussian() * (cero ? .22 : .08),
+                                ThreadLocalRandom.current().nextGaussian() * (cero ? .22 : .08),
+                                ThreadLocalRandom.current().nextGaussian() * (cero ? .22 : .08)), dust);
+                    }
                     LivingEntity struck = null;
                     for (LivingEntity entity : point.getNearbyLivingEntities(cero ? 1.5 : 1.2)) {
                         if (!entity.equals(player)) {
@@ -1034,15 +1099,19 @@ public final class ReleaseService implements Listener {
                     }
                     if (struck != null || (!release.element.phases() && point.getBlock().getType().isSolid())
                             || step >= 10) {
+                        beamSegment(from, point, release.form.color(), beamWidth);
                         burst(point, struck);
                         cancel();
                         return;
                     }
                 }
+                beamSegment(from, origin.clone().add(forward.clone().multiply(1 + (step + 1) * speed)),
+                        release.form.color(), beamWidth);
                 step++;
             }
 
             private void burst(Location point, LivingEntity struck) {
+                Vfx.shockwave(plugin, point.clone().subtract(0, .6, 0), release.form.color(), cero ? 3.5 : 2.0, 6);
                 accent(release, point, 40, 0.2, 0.2, 0.2, 0.25);
                 Vfx.burst(point, release.form.color(), 30, 0.9, 1.8f);
                 point.getWorld().spawnParticle(Particle.EXPLOSION, point, 1);
@@ -1311,7 +1380,9 @@ public final class ReleaseService implements Listener {
                 Location spot = target.clone().add(Math.cos(a) * d, 0, Math.sin(a) * d);
                 Location floor = groundAt(spot);
                 Location impact = floor != null ? floor : spot;
-                Vfx.line(impact.clone().add(0, 9, 0), impact, release.form.color(), 1.1f, 0.45);
+                Vfx.fallbackLine(impact.clone().add(0, 9, 0), impact, release.form.color(), 1.1f, 0.45);
+                Vfx.bolt(impact, release.form.color(), 9, .32);
+                Vfx.crater(impact, 1.6, 50);
                 accent(release, impact, 8, 0.2, 0.1, 0.2, 0.05);
                 Vfx.burst(impact.clone().add(0, 0.3, 0), release.form.color(), 10, 0.4, 1.3f);
                 Vfx.sound(impact, release.theme == Theme.HOLLOW ? Sound.ENTITY_BLAZE_SHOOT
@@ -1527,20 +1598,39 @@ public final class ReleaseService implements Listener {
                 double top = Math.min(10, tick * 0.5);
                 for (double h = 0; h <= top; h += 0.7) {
                     double a = tick * 0.4 + h;
-                    world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 0.7, h, Math.sin(a) * 0.7), 1,
-                            0.05, 0.05, 0.05, 0, release.form.dust(1.8f));
+                    Vfx.fallbackDust(base.clone().add(Math.cos(a) * 0.7, h, Math.sin(a) * 0.7), release.form.dust(1.8f));
                     if (release.theme != Theme.QUINCY) {
-                        world.spawnParticle(Particle.DUST, base.clone().add(-Math.cos(a) * 0.4, h, -Math.sin(a) * 0.4), 1,
-                                0.05, 0.05, 0.05, 0, Vfx.dust(dark, 1.6f));
+                        Vfx.fallbackDust(base.clone().add(-Math.cos(a) * 0.4, h, -Math.sin(a) * 0.4), Vfx.dust(dark, 1.6f));
                     }
+                }
+                if (release.theme == Theme.HOLLOW && tick % 2 == 0) {
+                    double a = tick * 0.9;
+                    Vfx.flame(base.clone().add(Math.cos(a) * 1.1, 0, Math.sin(a) * 1.1), Color.fromRGB(60, 30, 80), 2.2, 14);
+                } else if (release.theme == Theme.SOUL_REAPER && tick % 3 == 0) {
+                    double a = tick * 1.3;
+                    Vfx.flame(base.clone().add(Math.cos(a) * .9, 0, Math.sin(a) * .9),
+                            tick % 6 == 0 ? release.form.color() : dark, 2.6, 14);
                 }
                 accent(release, base.clone().add(0, 1, 0), 6, 0.6, 1.0, 0.6, 0.05);
                 if (tick == 0) {
-                    // A bolt of light from the sky, drawn with particles so it is not heard server-wide.
-                    Vfx.line(base.clone().add(0, 18, 0), base, release.theme == Theme.HOLLOW ? dark : Color.WHITE, 1.6f, 0.4);
+                    // A bolt of light from the sky (no thunder, so it is not heard server-wide).
+                    Color bolt = release.theme == Theme.HOLLOW ? dark : Color.WHITE;
+                    Vfx.fallbackLine(base.clone().add(0, 18, 0), base, bolt, 1.6f, 0.4);
+                    Vfx.bolt(base, release.theme == Theme.HOLLOW ? release.form.color() : Color.WHITE, 18, .55);
                     world.spawnParticle(Particle.SONIC_BOOM, base.clone().add(0, 1, 0), 1);
+                    // The pillar of reiatsu: the form's colour around a dark core (pure light for Quincy).
+                    Vfx.pillar(base, release.form.color(), 1.7, 10.5, 20, 14);
+                    if (release.theme != Theme.QUINCY) {
+                        Vfx.model(VfxKind.PILLAR, base, dark)
+                                .pose(new Quaternionf(), Vfx.scale(.9, .1, .9))
+                                .to(1, 20, new Quaternionf().rotateY(-2.5f), Vfx.scale(.9, 10, .9))
+                                .to(21, 18, new Quaternionf().rotateY(-5f), Vfx.scale(.3, 11, .3))
+                                .life(42, 8);
+                    }
                 }
                 if (tick == 20) {
+                    Location ground = groundAt(base);
+                    Vfx.crater(ground != null ? ground : base, 7, 200);
                     Vfx.shockwave(plugin, base, release.form.color(), 9.0, 12);
                     Vfx.burst(base.clone().add(0, 1, 0), release.form.color(), 80, 1.2, 2.0f);
                     world.spawnParticle(Particle.EXPLOSION, base.clone().add(0, 1, 0), 3, 0.8, 0.5, 0.8, 0);
@@ -1565,11 +1655,24 @@ public final class ReleaseService implements Listener {
         Vector right = new Vector(-Math.cos(yaw), 0, -Math.sin(yaw));
         switch (release.theme) {
             case QUINCY -> {
+                // Two flapping wings of light behind the shoulders.
+                double flap = 1 - 0.18 * Math.sin(tick * 0.25);
+                for (int side = -1; side <= 1; side += 2) {
+                    int s = side;
+                    Vector offset = new Vector(0, 1.3, 0).add(forward.clone().multiply(-0.3))
+                            .add(right.clone().multiply(side * 0.12));
+                    // In the facing frame, -X is the player's right; the right wing is mirrored onto it.
+                    float beat = (float) (Math.sin(tick * 0.25) * 0.3 + 0.12);
+                    Quaternionf pose = Vfx.facing(forward).rotateY(-s * 0.42f).rotateZ(-s * beat);
+                    Vector3f size = Vfx.scale(s > 0 ? -2.1 : 2.1, 2.1, 2.1);
+                    Vfx.keep("wing:" + player.getUniqueId() + ":" + side, 6, () -> Vfx.model(VfxKind.WING,
+                                    player.getLocation().add(offset), release.form.color())
+                            .follow(player, offset).pose(pose, size))
+                            .offset(offset).move(2, new Vector3f(), pose, size);
+                }
                 if (tick % 4 != 0) {
                     return;
                 }
-                // Two flapping wings of light behind the shoulders.
-                double flap = 1 - 0.18 * Math.sin(tick * 0.25);
                 for (int side = -1; side <= 1; side += 2) {
                     for (int row = 0; row < 2; row++) {
                         int points = row == 0 ? 10 : 7;
@@ -1578,7 +1681,7 @@ public final class ReleaseService implements Listener {
                             Location point = base.clone().add(0, 1.35 - row * 0.35 + Math.sin(t * Math.PI) * 0.75 - t * 0.35, 0)
                                     .add(forward.clone().multiply(-(0.35 + t * 0.25)))
                                     .add(right.clone().multiply(side * (0.25 + t * (row == 0 ? 1.7 : 1.2) * flap)));
-                            world.spawnParticle(Particle.DUST, point, 1, 0, 0, 0, 0, release.form.dust(1.0f));
+                            Vfx.fallbackDust(point, release.form.dust(1.0f));
                         }
                     }
                     if (tick % 12 == 0) {
@@ -1593,23 +1696,40 @@ public final class ReleaseService implements Listener {
                 for (int i = 0; i < 3; i++) {
                     double a = random.nextDouble(Math.PI * 2);
                     Location point = base.clone().add(Math.cos(a) * 0.5, random.nextDouble(0, 2.0), Math.sin(a) * 0.5);
-                    world.spawnParticle(Particle.DUST, point, 1, 0, 0.1, 0, 0,
-                            Vfx.dust(i == 0 ? release.form.color() : Color.fromRGB(20, 20, 25), 1.3f));
+                    Vfx.fallbackDust(point, Vfx.dust(i == 0 ? release.form.color() : Color.fromRGB(20, 20, 25), 1.3f));
+                }
+                if (tick % 4 == 0) {
+                    double a = random.nextDouble(Math.PI * 2);
+                    Vfx.flame(base.clone().add(Math.cos(a) * .45, random.nextDouble(0, .6), Math.sin(a) * .45),
+                            tick % 8 == 0 ? release.form.color() : Color.fromRGB(26, 22, 34), 1.2 + random.nextDouble(.8), 10);
                 }
                 if (tick % 10 == 0) {
                     world.spawnParticle(Particle.ELECTRIC_SPARK, base.clone().add(0, 1, 0), 4, 0.4, 0.6, 0.4, 0.03);
                 }
             }
             case HOLLOW -> {
+                // Bone horns above the mask, swept out to each side.
+                for (int side = -1; side <= 1; side += 2) {
+                    Vector offset = new Vector(0, 1.78, 0).add(right.clone().multiply(side * 0.17))
+                            .add(forward.clone().multiply(0.04));
+                    Quaternionf pose = Vfx.facing(forward).rotateZ(side * 0.55f);
+                    Vfx.keep("horn:" + player.getUniqueId() + ":" + side, 6, () -> Vfx.model(VfxKind.HORN,
+                                    player.getLocation().add(offset), Color.WHITE)
+                            .follow(player, offset).pose(pose, Vfx.scale(1.3)))
+                            .offset(offset).move(2, new Vector3f(), pose, Vfx.scale(1.3));
+                }
                 if (tick % 4 == 0) {
-                    // Bone horns above the mask.
                     Color bone = Color.fromRGB(235, 228, 205);
                     Location head = base.clone().add(0, 1.85, 0);
                     for (int side = -1; side <= 1; side += 2) {
-                        Vfx.line(head.clone().add(right.clone().multiply(side * 0.18)),
+                        Vfx.fallbackLine(head.clone().add(right.clone().multiply(side * 0.18)),
                                 head.clone().add(right.clone().multiply(side * 0.38)).add(forward.clone().multiply(0.15))
                                         .add(0, 0.5, 0), bone, 0.6f, 0.1);
                     }
+                }
+                if (tick % 6 == 0) {
+                    double a = ThreadLocalRandom.current().nextDouble(Math.PI * 2);
+                    Vfx.flame(base.clone().add(Math.cos(a) * .6, 0, Math.sin(a) * .6), Color.fromRGB(70, 200, 225), 1.1, 12);
                 }
                 if (tick % 10 == 0) {
                     Vfx.ring(base.clone().add(0, 0.1, 0), 1.0, 10, Particle.SOUL);
@@ -1620,9 +1740,16 @@ public final class ReleaseService implements Listener {
                 // Four armour plates in the form's colour orbiting the body.
                 for (int plate = 0; plate < 4; plate++) {
                     double a = tick * 0.15 + plate * (Math.PI / 2);
+                    Vector out = new Vector(Math.cos(a), 0, Math.sin(a));
+                    Vector offset = out.clone().multiply(1.1).setY(1.0);
+                    Quaternionf pose = Vfx.facing(out);
+                    Vfx.keep("plate:" + player.getUniqueId() + ":" + plate, 6, () -> Vfx.model(VfxKind.PLATE,
+                                    player.getLocation().add(offset), release.form.color())
+                            .follow(player, offset).pose(pose, Vfx.scale(1.15)))
+                            .offset(offset).move(2, new Vector3f(), pose, Vfx.scale(1.15));
                     for (double h = -0.5; h <= 0.51; h += 0.5) {
-                        world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 1.1, 1.0 + h, Math.sin(a) * 1.1),
-                                1, 0, 0, 0, 0, release.form.dust(1.1f));
+                        Vfx.fallbackDust(base.clone().add(Math.cos(a) * 1.1, 1.0 + h, Math.sin(a) * 1.1),
+                                release.form.dust(1.1f));
                     }
                 }
                 if (tick % 10 == 0) {
@@ -1782,7 +1909,19 @@ public final class ReleaseService implements Listener {
                     double a = tick * 0.5 + k * 0.7;
                     Location point = center.clone().add(Math.cos(a) * r, h, Math.sin(a) * r);
                     world.spawnParticle(Particle.CLOUD, point, 1, 0, 0, 0, 0);
-                    world.spawnParticle(Particle.DUST, point, 1, 0.05, 0.05, 0.05, 0, release.form.dust(1.4f));
+                    Vfx.fallbackDust(point, release.form.dust(1.4f));
+                }
+                // The funnel: three spinning bands of wind, widening as they climb.
+                for (int k = 0; k < 3; k++) {
+                    int band = k;
+                    double r = 1.3 + k * 1.1;
+                    Vector offset = new Vector(0, k * 1.7, 0);
+                    Color tint = k == 1 ? Color.WHITE : release.form.color();
+                    Vfx.keep("tempest:" + player.getUniqueId() + ":" + k, 4, () -> Vfx.model(VfxKind.SPIRAL,
+                                    center.clone().add(offset), tint).follow(player, offset).tone(band == 1 ? 1 : 0)
+                            .pose(new Quaternionf(), Vfx.scale(r * 2, 2.0, r * 2)))
+                            .move(2, new Vector3f(), new Quaternionf().rotateY(-(float) (tick * .55 + k)),
+                                    Vfx.scale(r * 2, 2.0, r * 2));
                 }
                 if (tick >= 60) {
                     for (LivingEntity entity : center.getNearbyLivingEntities(8)) {
@@ -1829,6 +1968,8 @@ public final class ReleaseService implements Listener {
         BlockData block = release.theme.pillar.createBlockData();
         Set<UUID> hit = new HashSet<>();
         double[] radii = {2.5, 4.5, 6.5};
+        Location floor = groundAt(center);
+        Vfx.crater(floor != null ? floor : center, 9, 140);
         for (int ring = 0; ring < radii.length; ring++) {
             double radius = radii[ring];
             double height = 2.0 + ring * 0.6;
@@ -1855,7 +1996,7 @@ public final class ReleaseService implements Listener {
                         }
                     }
                 }
-                Vfx.ring(center.clone().add(0, 0.2, 0), radius, (int) (radius * 8), release.form.color(), 1.4f);
+                Vfx.shockwave(plugin, center, release.form.color(), radius + 1, 6);
             }, ring * 6L);
         }
         return true;
@@ -1866,6 +2007,22 @@ public final class ReleaseService implements Listener {
         Location center = player.getLocation();
         Vfx.sound(center, Sound.BLOCK_BELL_USE, 1.0f, 0.8f);
         Vfx.sound(center, Sound.BLOCK_BEACON_POWER_SELECT, 1.0f, 0.8f);
+        // A dome of light over the zone, with its rings of power turning slowly inside.
+        Vfx.model(VfxKind.ORB, center, release.form.color()).tone(2)
+                .pose(new Quaternionf(), Vfx.scale(.5))
+                .to(1, 10, new Quaternionf().rotateY(1f), Vfx.scale(11, 9, 11))
+                .to(11, 160, new Quaternionf().rotateY(5f), Vfx.scale(11.5, 9.2, 11.5))
+                .life(172, 10);
+        for (int layer = 0; layer < 4; layer++) {
+            double h = layer * 1.2;
+            double r = Math.sqrt(Math.max(0.5, 36 - h * h * 2.2));
+            float turn = layer % 2 == 0 ? 6f : -6f;
+            Vfx.model(VfxKind.RING, center.clone().add(0, 0.2 + h, 0), release.form.color())
+                    .pose(new Quaternionf(), Vfx.scale(.3, 1, .3))
+                    .to(1 + layer * 3, 8, new Quaternionf().rotateY(turn * .1f), Vfx.scale(r, 1.2, r))
+                    .to(10 + layer * 3, 150, new Quaternionf().rotateY(turn), Vfx.scale(r, 1.2, r))
+                    .life(172, 10);
+        }
         new BukkitRunnable() {
             int tick;
 
@@ -1878,7 +2035,12 @@ public final class ReleaseService implements Listener {
                 for (int layer = 0; layer < 4; layer++) {
                     double h = layer * 1.2;
                     double r = Math.sqrt(Math.max(0.5, 36 - h * h * 2.2));
-                    Vfx.ring(center.clone().add(0, 0.2 + h, 0), r, (int) (r * 6), release.form.color(), 1.2f);
+                    int points = (int) (r * 6);
+                    for (int i = 0; i < points; i++) {
+                        double a = i * (Math.PI * 2 / points);
+                        Vfx.fallbackDust(center.clone().add(Math.cos(a) * r, 0.2 + h, Math.sin(a) * r),
+                                release.form.dust(1.2f));
+                    }
                 }
                 accent(release, center.clone().add(0, 1, 0), 10, 3, 1.5, 3, 0.02);
                 for (Player ally : center.getNearbyPlayers(6)) {
