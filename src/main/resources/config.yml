@@ -73,6 +73,21 @@ hueco-mundo:
 
 # Spiritual pressure. It mostly gives information, plus a small edge that fades, and never slows or blinds.
 # Level = 6 - rank (rank 5 = 1, rank 1 = 5), +2 in a first-form release, +4 in an advanced release.
+# Garganta tears: rifts that open in the sky near players, letting three waves of Hollows through,
+# ending with a Menos Grande. Sealing one drops a shared loot pile at the rift.
+tears:
+  enabled: true
+  # Worlds tears may open in. Empty means the main overworld.
+  worlds: []
+  min-players: 2
+  min-interval-minutes: 45
+  max-interval-minutes: 90
+  time-limit-minutes: 12
+  # Damage a player must deal to the tear's Hollows to count as having helped seal it.
+  min-contribution: 20
+  menos-health: 300
+  menos-health-per-extra-player: 80
+
 pressure:
   enabled: true
   # Players feel anyone at least sense-gap levels above them within sense-radius blocks.

@@ -52,6 +52,7 @@ public final class HuecoMundoService implements Listener {
     private final NamespacedKey recipeKey;
     private final NamespacedKey hollowTypeKey;
     private VastoLordeBoss vastoLorde;
+    private GargantaTears tears;
     private final Map<UUID, Location> returnLocations = new HashMap<>();
     private final File returnFile;
     private final HuecoArrivalIntro arrivalIntro;
@@ -102,6 +103,8 @@ public final class HuecoMundoService implements Listener {
         Bukkit.getPluginManager().registerEvents(arrivalIntro, plugin);
         hollowVisuals = new HollowVisuals(plugin, world, hollowTypeKey);
         vastoLorde = new VastoLordeBoss(plugin, this);
+        tears = new GargantaTears(plugin, this);
+        Bukkit.getPluginManager().registerEvents(tears, plugin);
         Bukkit.getPluginManager().registerEvents(vastoLorde, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::spawnHollows, 200L, 200L);
     }
@@ -109,6 +112,11 @@ public final class HuecoMundoService implements Listener {
     /** Admin test summon near the player. Returns false if one is already active or no spot was found. */
     public boolean summonVastoLorde(Player player) {
         return vastoLorde != null && vastoLorde.summon(player);
+    }
+
+    /** Admin test: opens a Garganta tear near the player in the overworld. */
+    public boolean summonTear(Player player) {
+        return tears != null && tears.summon(player);
     }
 
     public World world() {
@@ -119,6 +127,9 @@ public final class HuecoMundoService implements Listener {
         arrivalIntro.shutdown();
         if (vastoLorde != null) {
             vastoLorde.shutdown();
+        }
+        if (tears != null) {
+            tears.shutdown();
         }
         if (hollowVisuals != null) {
             hollowVisuals.shutdown();
@@ -343,10 +354,10 @@ public final class HuecoMundoService implements Listener {
     LivingEntity spawnHollow(Location location, String type) {
         LivingEntity hollow;
         if (type.equals("vasto_lorde")) {
-            hollow = world.spawn(location, WitherSkeleton.class, CreatureSpawnEvent.SpawnReason.CUSTOM,
+            hollow = location.getWorld().spawn(location, WitherSkeleton.class, CreatureSpawnEvent.SpawnReason.CUSTOM,
                     entity -> configureHollow(entity, type));
         } else {
-            hollow = world.spawn(location, Husk.class, CreatureSpawnEvent.SpawnReason.CUSTOM,
+            hollow = location.getWorld().spawn(location, Husk.class, CreatureSpawnEvent.SpawnReason.CUSTOM,
                     entity -> configureHollow(entity, type));
         }
         hollow.getPersistentDataContainer().set(plugin.bossIdKey(), PersistentDataType.STRING, type);

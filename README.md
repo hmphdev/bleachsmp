@@ -45,6 +45,31 @@ Head north from the Severed Gate toward Las Noches at X 0, Z -384. The south cau
 
 Hueco Mundo's Hollows have animated models that work on vanilla clients without a resource pack: the Gillian is an 11-block-tall cloaked giant that spawns in open terrain, the Adjuchas is a six-limbed dune hunter, and the Vasto Lorde has a split mask, a horned crown, and blade-like arms. Aim at the creature's body rather than its decorative extremities: combat still uses the underlying mob's hitbox.
 
+### Garganta tears
+
+Every 45–90 minutes, if at least two players are in the overworld, a black rift starts tearing open in the sky 50–110 blocks from one of them. It only opens over open, dry ground. The server is told roughly where, and there is a 60-second countdown, so anyone can head there.
+
+- **Waves:** two waves of Adjuchas, then a **Menos Grande**. Waves scale with the number of players nearby.
+  - The Menos Grande has 300 health, plus 80 for each extra player.
+  - It fires a telegraphed Cero across the area: it charges, shows its aim line, then fires a beam that stops at blocks.
+- **Sealing:** clear the last wave to seal the tear.
+  - A shared loot pile drops where the rift stood, so expect a fight over it. It can hold diamonds, emeralds, golden apples, ender pearls, XP bottles, echo shards and ghast tears, which are the Garganta recipe ingredients, and rarely netherite scrap, totems or a notched apple.
+  - Everyone who dealt at least 20 damage also gets a personal share and XP.
+  - The Menos Grande counts as a boss for first-clear rank credit.
+- **Faction bonuses:**
+  - **Soul Reapers:** closing Gargantas is their duty, so their personal share and XP are doubled.
+  - **Hollows:** they devour every tear Hollow they kill, healing 2 hearts and gaining absorption.
+  - **Quincy:** each kill with a bow or crossbow adds a spoil to their share, up to 3.
+  - **Fullbringers:** they draw on the rift's residue for double XP from kills and a large XP bonus at the seal.
+- **No cheese:**
+  - Tear Hollows take no damage from lava, falls, drowning or traps.
+  - The Menos Grande can only be hurt by players.
+  - Hollows dragged more than 40 blocks away are pulled back.
+  - The tear closes on its own after 12 minutes, or after 2 minutes with no one nearby.
+- **Safe for builds:** no blocks are ever changed.
+
+Admins can open a tear near themselves with `/bleach boss tear`, which uses a 10-second countdown. Tune everything under `tears` in `config.yml`.
+
 ### Spiritual pressure
 
 Every player has a reiatsu level. Rank gives 1–5: rank 5 is 1 and rank 1 is 5. A first-form release adds 2 and an advanced release adds 4, so a rank 1 player in Bankai is at 9. Pressure never slows, blinds or stuns players.

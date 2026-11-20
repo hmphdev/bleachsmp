@@ -94,7 +94,7 @@ final class HollowVisuals implements Listener {
         var iterator = rigs.values().iterator();
         while (iterator.hasNext()) {
             Rig rig = iterator.next();
-            if (!rig.mob.isValid() || rig.mob.isDead() || rig.mob.getWorld() != world) {
+            if (!rig.mob.isValid() || rig.mob.isDead()) {
                 iterator.remove();
                 rig.removePieces();
                 continue;
@@ -104,7 +104,9 @@ final class HollowVisuals implements Listener {
                 rig.mob.setInvisible(true);
             }
             Location feet = rig.mob.getLocation();
-            if (players.stream().anyMatch(player -> player.getLocation().distanceSquared(feet) < VIEW_DISTANCE_SQUARED)) {
+            // Tears bring Hollows into other worlds, so check the rig's own world.
+            List<Player> viewers = rig.mob.getWorld() == world ? players : rig.mob.getWorld().getPlayers();
+            if (viewers.stream().anyMatch(player -> player.getLocation().distanceSquared(feet) < VIEW_DISTANCE_SQUARED)) {
                 if (tick % 20 == 0) {
                     rig.updateSize();
                 }
@@ -162,8 +164,8 @@ final class HollowVisuals implements Listener {
         if (rig != null && event.getFinalDamage() > 0) {
             rig.hitUntil = tick + 8;
             Location center = rig.mob.getLocation().add(0, rig.model.height() * rig.magnification * .48, 0);
-            world.spawnParticle(Particle.DUST, center, 11, .27, .29, .27, 0, HIT_DUST);
-            world.playSound(center, Sound.BLOCK_BONE_BLOCK_HIT, .9f, .63f);
+            center.getWorld().spawnParticle(Particle.DUST, center, 11, .27, .29, .27, 0, HIT_DUST);
+            center.getWorld().playSound(center, Sound.BLOCK_BONE_BLOCK_HIT, .9f, .63f);
         }
     }
 
@@ -173,8 +175,8 @@ final class HollowVisuals implements Listener {
         if (rig != null) {
             rig.removePieces();
             Location center = rig.mob.getLocation().add(0, rig.model.height() * rig.magnification * .48, 0);
-            world.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, center, 16, .4, .6, .4, .015);
-            world.playSound(center, Sound.ENTITY_WARDEN_DEATH, .8f, 1.25f);
+            center.getWorld().spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, center, 16, .4, .6, .4, .015);
+            center.getWorld().playSound(center, Sound.ENTITY_WARDEN_DEATH, .8f, 1.25f);
         }
     }
 
@@ -233,7 +235,7 @@ final class HollowVisuals implements Listener {
             if (pieces.isEmpty() || pieces.stream().anyMatch(piece -> !piece.isValid())) {
                 removePieces();
                 for (HollowModel.Piece piece : model.pieces()) {
-                    pieces.add(world.spawn(feet, BlockDisplay.class, display -> {
+                    pieces.add(feet.getWorld().spawn(feet, BlockDisplay.class, display -> {
                         display.setBlock(piece.material().createBlockData());
                         display.setPersistent(false);
                         display.setGravity(false);
