@@ -96,7 +96,7 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
             return matching(List.of("first", "advanced"), args[1]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("boss")) {
-            return matching(List.of("mark", "unmark"), args[1]);
+            return matching(List.of("mark", "unmark", "vasto"), args[1]);
         }
         return List.of();
     }
@@ -129,6 +129,13 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
         }
         if (!(sender instanceof Player player)) {
             sender.sendMessage("Boss marking must be used in-game while looking at an entity.");
+            return;
+        }
+        if (args.length == 2 && args[1].equalsIgnoreCase("vasto")) {
+            if (!plugin.huecoMundo().summonVastoLorde(player)) {
+                player.sendMessage(Component.text("Stand on open ground in Hueco Mundo, with no Vasto Lorde already active.",
+                        NamedTextColor.RED));
+            }
             return;
         }
         if (args.length == 2 && args[1].equalsIgnoreCase("unmark")) {
@@ -164,7 +171,7 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
                     NamedTextColor.GRAY));
             return;
         }
-        player.sendMessage(Component.text("Usage: /bleach boss mark <id> or /bleach boss unmark",
+        player.sendMessage(Component.text("Usage: /bleach boss mark <id>, /bleach boss unmark or /bleach boss vasto",
                 NamedTextColor.RED));
     }
 

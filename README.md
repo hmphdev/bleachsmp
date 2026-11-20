@@ -26,11 +26,59 @@ Copy `target/bleach-smp-0.1.0.jar` into the server's `plugins` directory.
 
 The Garganta recipe is one Echo Shard, one Ender Eye, and one Ghast Tear. Right-click the crafted item to travel; use it again in Hueco Mundo to return. `/bleach garganta` provides the same travel action without consuming an item. The per-player return location is saved across restarts. Players arrive at the far end of the Severed Gate's lantern-lined approach, facing its broad staircase and twin 48-block towers. Hueco Mundo's terrain generates as players explore. Use a dedicated world name. These landmarks generate in new chunks. Configure its world name and Hollow population in `plugins/BleachSMP/config.yml`.
 
+### Hueco Mundo terrain
+
+The desert is split into regions that blend into each other:
+
+- **Dune seas**: long, wind-aligned ridges with a gentle windward slope and a steep slip face.
+- **Salt flats**: flat basins of bleached stone broken by a web of grey cracks.
+- **Bleached mesas**: terraced plateaus up to about 100 blocks high. Their cliffs show bands of calcite and older rock.
+- **The Forest of Menos**: dark caverns at about y 16–45 under roughly a third of the desert. Their floors are basalt and ash, and quartz trees grow in them, some tipped with faint light. Sinkholes about every 500 blocks drop into them. Each shaft ends in a drift of powder snow that breaks the fall. The only way back up is to build or dig out.
+
+Across the surface are leafless quartz trees, tilted crystal spires, the half-buried skeletons of something enormous with walk-in skulls, and scattered bone shards and faint lights. The terrain eases flat around every landmark. Hollows spawn on the sand, not on top of trees, spires or bones.
+
+Terrain is generated once per chunk, so a world explored before this update keeps its old terrain in visited areas. To see the new terrain everywhere, stop the server and delete the Hueco Mundo world folder (`HuecoMundo` by default). It and every landmark regenerate on the next start. Players' saved return locations are kept.
+
 The first time each player arrives through a Garganta after installing this feature, a short camera sweep reveals the Severed Gate before returning control at the normal arrival spot. The intro needs no resource pack or client mod. The player’s seen flag is saved across reconnects and server restarts, so later trips skip the cinematic. To disable it, set `hueco-mundo.arrival-cutscene: false` in `plugins/BleachSMP/config.yml`.
 
 Head north from the Severed Gate toward Las Noches at X 0, Z -384. The south causeway leads through the fortress wall into a lantern-lit courtyard with an arena ring and a walkable domed keep.
 
 Hueco Mundo's Hollows have animated models that work on vanilla clients without a resource pack: the Gillian is an 11-block-tall cloaked giant that spawns in open terrain, the Adjuchas is a six-limbed dune hunter, and the Vasto Lorde has a split mask, a horned crown, and blade-like arms. Aim at the creature's body rather than its decorative extremities: combat still uses the underlying mob's hitbox.
+
+### Spiritual pressure
+
+Every player has a reiatsu level. Rank gives 1–5: rank 5 is 1 and rank 1 is 5. A first-form release adds 2 and an advanced release adds 4, so a rank 1 player in Bankai is at 9. Pressure never slows, blinds or stuns players.
+
+- **Sensing:** when someone 2 or more levels above you is within 40 blocks, you feel it. A line like "A heavy reiatsu presses down on you, to the northeast" appears with a low hum, and it is more urgent the bigger the gap. Each person is felt at most every 90 seconds, but a sudden spike such as a Bankai release is felt immediately. Allies and friends, invisible or vanished players, spectators and the inner world are ignored.
+- **Suppression:** stay crouched for 3 seconds while unreleased to hide your reiatsu from sensing. This is useful for ambushes, at the cost of moving at sneaking speed.
+- **The fight edge:** once you are in a fight with someone 3 or more levels above you, you deal 10% less damage to them, and your technique and signature cooldowns are 15% longer. After 10 seconds you adapt, the edge fades over 5 seconds, and from then on it is an even fight. You get one chat line when it lands and one when you have adapted. It is worked out per opponent, so fighting several strong players at once does not stack it.
+
+Tune it under `pressure` in `config.yml`, or set `pressure.enabled: false` to turn it off.
+
+### The Vasto Lorde
+
+The Vasto Lorde is the apex Hollow and a server-wide event, not a random spawn. Only one can exist at a time.
+
+- **How it appears:** about once every 8 minutes that someone spends deep in the desert (250+ blocks from the Gate and away from landmarks), the wind stops, the sand trembles, and a few seconds later it rises nearby. The whole server is told, and players in Hueco Mundo get its rough coordinates. After a kill there is a 90-minute cooldown.
+- **Toughness:** 600 health, plus 150 for each extra player nearby when it appears (up to 1024). It has heavy armour and can't be knocked back.
+- **Hierro:** nothing but players can hurt it. Fall damage, lava, suffocation, poison, TNT and tamed or summoned mobs do nothing, and player projectiles deal 60%.
+- **Spiritual pressure:** standing near it slows you.
+- **Abilities, all telegraphed:**
+  - **Cero:** it charges, shows a locked aim line, then fires a beam that stops at blocks. Step off the line.
+  - **Sonído:** it vanishes, appears behind you, and strikes a moment later.
+  - **Reiatsu crush:** a red ring marks the area; it leaps and slams down. Leave the ring.
+  - **Adjuchas:** it calls two at 70% and two at 35% health.
+- **Resurrección (50% health):** a 3-second invulnerable release with a shockwave. Afterwards it is faster and hits harder, fires three Ceros in a fan, and uses **Gran Rey Cero**: a long charge, a ring marking where you stood, then a slow sphere that detonates there.
+- **No leashing or kiting:** if it is pulled more than 56 blocks from where it rose, it Sonídos back and heals 5%. If nobody is within 40 blocks it regenerates, and after 5 minutes alone it sinks back into the sand.
+- **Rewards:** everyone who dealt at least 5% of its health gets:
+  - its boss first-clear rank points
+  - a glinting **Vasto Lorde Mask** trophy naming the slayers
+  - a large amount of XP
+  - if they are mastering their Bankai and fought in their first-form release, one mastery victory
+
+  The kill is announced server-wide.
+
+Admins can summon one for testing with `/bleach boss vasto` while standing in Hueco Mundo. Tune everything under `hueco-mundo.vasto-lorde` in `config.yml`.
 
 Other future work includes additional boss encounters, death recovery, the Rank 0 event role, and the server resource pack/custom weapon models. Configure rank thresholds, faction titles, ability unlocks and cooldowns, PvP cooldowns, boss contribution, rewards, and the weekly challenge rotation in `plugins/BleachSMP/config.yml`.
 

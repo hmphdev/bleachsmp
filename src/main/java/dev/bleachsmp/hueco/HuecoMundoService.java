@@ -51,6 +51,7 @@ public final class HuecoMundoService implements Listener {
     private final NamespacedKey itemKey;
     private final NamespacedKey recipeKey;
     private final NamespacedKey hollowTypeKey;
+    private VastoLordeBoss vastoLorde;
     private final Map<UUID, Location> returnLocations = new HashMap<>();
     private final File returnFile;
     private final HuecoArrivalIntro arrivalIntro;
@@ -100,7 +101,14 @@ public final class HuecoMundoService implements Listener {
         registerGargantaRecipe();
         Bukkit.getPluginManager().registerEvents(arrivalIntro, plugin);
         hollowVisuals = new HollowVisuals(plugin, world, hollowTypeKey);
+        vastoLorde = new VastoLordeBoss(plugin, this);
+        Bukkit.getPluginManager().registerEvents(vastoLorde, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::spawnHollows, 200L, 200L);
+    }
+
+    /** Admin test summon near the player. Returns false if one is already active or no spot was found. */
+    public boolean summonVastoLorde(Player player) {
+        return vastoLorde != null && vastoLorde.summon(player);
     }
 
     public World world() {
@@ -109,6 +117,9 @@ public final class HuecoMundoService implements Listener {
 
     public void shutdown() {
         arrivalIntro.shutdown();
+        if (vastoLorde != null) {
+            vastoLorde.shutdown();
+        }
         if (hollowVisuals != null) {
             hollowVisuals.shutdown();
         }
@@ -226,6 +237,7 @@ public final class HuecoMundoService implements Listener {
         if (world == null || world.getPlayers().isEmpty()) {
             return;
         }
+        vastoLorde.consider(world);
         int maxTotal = Math.max(0, plugin.getConfig().getInt("hueco-mundo.hollows.max-loaded", 24));
         int maxNearby = Math.max(0, plugin.getConfig().getInt("hueco-mundo.hollows.max-near-player", 4));
         int total = countTaggedHollows(world, null, 0);
@@ -250,6 +262,10 @@ public final class HuecoMundoService implements Listener {
         }
     }
 
+    /** Trees, spires and bones: hollows should stand on the sand, not on top of these. */
+    private static final java.util.Set<Material> FEATURE_BLOCKS = java.util.EnumSet.of(Material.QUARTZ_BLOCK,
+            Material.SMOOTH_QUARTZ, Material.WHITE_STAINED_GLASS, Material.BONE_BLOCK, Material.END_ROD);
+
     private Location findSpawnLocation(Location center, String type) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         for (int attempt = 0; attempt < 16; attempt++) {
@@ -261,7 +277,8 @@ public final class HuecoMundoService implements Listener {
                 continue;
             }
             int y = world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
-            if (y <= world.getMinHeight() || !world.getBlockAt(x, y, z).getType().isSolid()) {
+            Material ground = world.getBlockAt(x, y, z).getType();
+            if (y <= world.getMinHeight() || !ground.isSolid() || FEATURE_BLOCKS.contains(ground)) {
                 continue;
             }
             Location feet = new Location(world, x + 0.5, y + 1, z + 0.5);
@@ -303,16 +320,27 @@ public final class HuecoMundoService implements Listener {
     }
 
     private String rollHollowType() {
+        // Vasto Lordes never spawn as ordinary Hollows; VastoLordeBoss runs that encounter.
         int roll = ThreadLocalRandom.current().nextInt(100);
-        int vastoWeight = Math.min(100,
-                Math.max(0, plugin.getConfig().getInt("hueco-mundo.hollows.vasto-lorde-weight", 4)));
-        int adjuchasWeight = Math.min(100 - vastoWeight,
+        int adjuchasWeight = Math.min(100,
                 Math.max(0, plugin.getConfig().getInt("hueco-mundo.hollows.adjuchas-weight", 22)));
-        return roll < vastoWeight ? "vasto_lorde"
-                : roll < vastoWeight + adjuchasWeight ? "adjuchas" : HollowModel.GILLIAN_TYPE;
+        return roll < adjuchasWeight ? "adjuchas" : HollowModel.GILLIAN_TYPE;
     }
 
-    private void spawnHollow(Location location, String type) {
+    VastoLordeBoss vastoLorde() {
+        return vastoLorde;
+    }
+
+    NamespacedKey hollowTypeKey() {
+        return hollowTypeKey;
+    }
+
+    /** A clear spot on open ground 20–36 blocks from {@code center}, or null. */
+    Location findBossLocation(Location center) {
+        return findSpawnLocation(center, VastoLordeBoss.TYPE);
+    }
+
+    LivingEntity spawnHollow(Location location, String type) {
         LivingEntity hollow;
         if (type.equals("vasto_lorde")) {
             hollow = world.spawn(location, WitherSkeleton.class, CreatureSpawnEvent.SpawnReason.CUSTOM,
@@ -324,6 +352,7 @@ public final class HuecoMundoService implements Listener {
         hollow.getPersistentDataContainer().set(plugin.bossIdKey(), PersistentDataType.STRING, type);
         hollow.getPersistentDataContainer().set(hollowTypeKey, PersistentDataType.STRING, type);
         hollowVisuals.track(hollow, type);
+        return hollow;
     }
 
     private void configureHollow(LivingEntity hollow, String type) {
