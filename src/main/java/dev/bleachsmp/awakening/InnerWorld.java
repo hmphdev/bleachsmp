@@ -357,24 +357,17 @@ final class InnerWorld implements Listener {
         Trial trial = trials.get(player.getUniqueId());
         if (trial != null && trial.fight() == fight) {
             bankai.winTrial(player, fight.kit(), fight.formName());
-            finish(player, false, true);
+            finish(player, false, true, null);
         }
-    }
-
-    void lose(Player player) {
-        lose(player, "forfeit");
     }
 
     void lose(Player player, String reason) {
-        if (trials.containsKey(player.getUniqueId())) {
-            plugin.getLogger().info("Bankai trial for " + player.getName() + " lost: " + reason + ".");
-        }
-        finish(player, true, true);
+        finish(player, true, true, reason);
     }
 
     void abort(Player player) {
         cancelPreparation(player);
-        finish(player, false, true);
+        finish(player, false, true, null);
     }
 
     private void cancelPreparation(Player player) {
@@ -384,11 +377,15 @@ final class InnerWorld implements Listener {
         }
     }
 
-    private void finish(Player player, boolean loss, boolean returnNow) {
+    /** Ends a trial. Every loss is logged with its reason, whichever path ended it. */
+    private void finish(Player player, boolean loss, boolean returnNow, String reason) {
         UUID id = player.getUniqueId();
         Trial trial = trials.remove(id);
         if (trial == null) {
             return;
+        }
+        if (loss) {
+            plugin.getLogger().info("Bankai trial for " + player.getName() + " lost: " + reason + ".");
         }
         spirits.remove(trial.fight().spiritId());
         trial.fight().close();
@@ -482,7 +479,7 @@ final class InnerWorld implements Listener {
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (trials.containsKey(player.getUniqueId())) {
-                lose(player);
+                lose(player, "server shutting down");
             } else if (returnPending(player)) {
                 recover(player);
             }
@@ -500,7 +497,7 @@ final class InnerWorld implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onQuit(PlayerQuitEvent event) {
         cancelPreparation(event.getPlayer());
-        finish(event.getPlayer(), true, false);
+        finish(event.getPlayer(), true, false, "quit");
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -528,7 +525,7 @@ final class InnerWorld implements Listener {
         if (contains(event.getFrom()) && !transferring.contains(player.getUniqueId())
                 && trials.containsKey(player.getUniqueId())) {
             // The external teleport has landed; don't re-enter the teleport pipeline from its own callback.
-            finish(player, true, false);
+            finish(player, true, false, "left the inner world");
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (player.isOnline()) {
                     recover(player);

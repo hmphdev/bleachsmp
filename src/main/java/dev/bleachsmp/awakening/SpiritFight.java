@@ -161,8 +161,9 @@ final class SpiritFight {
         // Right after the cross-world teleport the arena chunks may not be entity-ticking yet, so the player's
         // position and the spirit's validity can briefly read wrong. Only end the trial if it persists.
         if (!arena.inArena(owner) || !spirit.isValid()) {
-            unstable++;
-            if (tick > GRACE_TICKS && unstable >= 20) {
+            // Readings during the grace period don't count toward the one-second limit.
+            unstable = tick > GRACE_TICKS ? unstable + 1 : 0;
+            if (unstable >= 20) {
                 arena.lose(owner, !spirit.isValid() ? "spirit not valid (chunk unloaded?)" : "left the arena");
                 return;
             }
