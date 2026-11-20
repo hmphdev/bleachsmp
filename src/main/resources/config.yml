@@ -177,3 +177,17 @@ abilities:
     cooldown-seconds: 25
     duration-seconds: 5
     resistance-amplifier: 0
+
+# Hollow models. Players who load the pack see textured models; anyone who declines sees block-built Hollows.
+resource-pack:
+  enabled: true
+  # Empty: this server hosts the pack itself on 'port' (open that TCP port on your host/firewall).
+  # Or set a public download URL, e.g. a GitHub release asset. The current pack is written to
+  # plugins/BleachSMP/BleachSMP-resources.zip on every start; re-upload it after updating the plugin.
+  url: ""
+  port: 8163
+  # Address players download from when self-hosting. Empty uses the address each player connected with.
+  public-host: ""
+  # true kicks players who decline the pack.
+  required: false
+  prompt: "BleachSMP uses a resource pack for its Hollow models."

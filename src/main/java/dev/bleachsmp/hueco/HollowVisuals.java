@@ -1,6 +1,7 @@
 package dev.bleachsmp.hueco;
 
 import dev.bleachsmp.BleachSmpPlugin;
+import dev.bleachsmp.pack.ResourcePackService;
 import io.papermc.paper.event.entity.EntityEquipmentChangedEvent;
 import io.papermc.paper.event.player.PlayerTrackEntityEvent;
 import java.util.ArrayList;
@@ -19,7 +20,9 @@ import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Husk;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,7 +34,10 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
-/** The server mob remains the sole hitbox and owner of AI, loot and progression. */
+/**
+ * The server mob remains the sole hitbox and owner of AI, loot and progression. Players with the resource
+ * pack see one textured item model per joint; everyone else sees the same shape built from block displays.
+ */
 final class HollowVisuals implements Listener {
     private static final ItemStack AIR = new ItemStack(Material.AIR);
     private static final List<EquipmentSlot> VISIBLE_SLOTS = List.of(EquipmentSlot.HAND, EquipmentSlot.OFF_HAND,
@@ -42,13 +48,16 @@ final class HollowVisuals implements Listener {
     private final BleachSmpPlugin plugin;
     private final World world;
     private final NamespacedKey typeKey;
+    private final ResourcePackService packs;
     private final Map<UUID, Rig> rigs = new HashMap<>();
     private int tick;
 
-    HollowVisuals(BleachSmpPlugin plugin, World world, NamespacedKey typeKey) {
+    HollowVisuals(BleachSmpPlugin plugin, World world, NamespacedKey typeKey, ResourcePackService packs) {
         this.plugin = plugin;
         this.world = world;
         this.typeKey = typeKey;
+        this.packs = packs;
+        packs.onChange((player, has) -> rigs.values().forEach(rig -> rig.showTo(player, has)));
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         plugin.getServer().getScheduler().runTaskTimer(plugin, this::update, 1, 2);
     }
@@ -106,11 +115,22 @@ final class HollowVisuals implements Listener {
             Location feet = rig.mob.getLocation();
             // Tears bring Hollows into other worlds, so check the rig's own world.
             List<Player> viewers = rig.mob.getWorld() == world ? players : rig.mob.getWorld().getPlayers();
-            if (viewers.stream().anyMatch(player -> player.getLocation().distanceSquared(feet) < VIEW_DISTANCE_SQUARED)) {
+            boolean modelViewer = false;
+            boolean blockViewer = false;
+            for (Player player : viewers) {
+                if (player.getLocation().distanceSquared(feet) < VIEW_DISTANCE_SQUARED) {
+                    if (packs.hasPack(player)) {
+                        modelViewer = true;
+                    } else {
+                        blockViewer = true;
+                    }
+                }
+            }
+            if (modelViewer || blockViewer) {
                 if (tick % 20 == 0) {
                     rig.updateSize();
                 }
-                rig.update(feet, tick);
+                rig.update(feet, tick, modelViewer, blockViewer);
             } else {
                 rig.removePieces();
             }
@@ -184,7 +204,9 @@ final class HollowVisuals implements Listener {
         private final LivingEntity mob;
         private final HollowModel model;
         private final boolean gillian;
+        private final List<HollowModel.Piece> blockPieces;
         private final List<BlockDisplay> pieces = new ArrayList<>();
+        private final List<ItemDisplay> parts = new ArrayList<>();
         private Location previous;
         private float stride;
         private float magnification = 1;
@@ -194,6 +216,33 @@ final class HollowVisuals implements Listener {
             this.mob = mob;
             this.model = model;
             this.gillian = gillian;
+            blockPieces = model.blockPieces();
+        }
+
+        /** Item models for pack users, blocks for everyone else; never both to one player. */
+        private void showTo(Player player, boolean hasPack) {
+            for (ItemDisplay part : parts) {
+                if (hasPack) {
+                    player.showEntity(plugin, part);
+                } else {
+                    player.hideEntity(plugin, part);
+                }
+            }
+            for (BlockDisplay piece : pieces) {
+                if (hasPack) {
+                    player.hideEntity(plugin, piece);
+                } else {
+                    player.showEntity(plugin, piece);
+                }
+            }
+        }
+
+        private void applyVisibility(Entity display, boolean model) {
+            for (Player player : plugin.getServer().getOnlinePlayers()) {
+                if (packs.hasPack(player) != model) {
+                    player.hideEntity(plugin, display);
+                }
+            }
         }
 
         private void updateSize() {
@@ -219,7 +268,7 @@ final class HollowVisuals implements Listener {
             }
         }
 
-        private void update(Location feet, int tick) {
+        private void update(Location feet, int tick, boolean modelViewer, boolean blockViewer) {
             feet.setYaw(mob.getBodyYaw());
             feet.setPitch(0);
             float movement = previous == null ? 0 : (float) Math.hypot(feet.getX() - previous.getX(),
@@ -232,9 +281,44 @@ final class HollowVisuals implements Listener {
             float step = moving ? (float) Math.sin(stride) : pulse * .12f;
             float lift = (moving ? Math.abs(step) * .048f : pulse * .022f) * magnification;
             float scale = magnification * (tick < hitUntil ? 1.025f : 1f);
-            if (pieces.isEmpty() || pieces.stream().anyMatch(piece -> !piece.isValid())) {
-                removePieces();
-                for (HollowModel.Piece piece : model.pieces()) {
+            if (!modelViewer) {
+                removeParts();
+            } else if (parts.isEmpty() || parts.stream().anyMatch(part -> !part.isValid())) {
+                removeParts();
+                for (HollowModel.Part part : model.parts()) {
+                    ItemStack item = new ItemStack(Material.BONE);
+                    item.editMeta(meta -> meta.setItemModel(HollowPackAssets.modelKey(model.type(), part.joint())));
+                    ItemDisplay display = feet.getWorld().spawn(feet, ItemDisplay.class, entity -> {
+                        entity.setItemStack(item);
+                        entity.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+                        entity.setPersistent(false);
+                        entity.setGravity(false);
+                        entity.setVisibleByDefault(false);
+                        entity.setTeleportDuration(2);
+                        entity.setInterpolationDuration(2);
+                        entity.setViewRange(1);
+                        entity.setDisplayWidth(4 * magnification);
+                        entity.setDisplayHeight((model.height() + .4f) * magnification);
+                        if (part.joint() == HollowModel.Joint.BODY) {
+                            entity.setShadowRadius(model.height() * .22f * magnification);
+                            entity.setShadowStrength(.75f);
+                        }
+                        entity.setTransformation(part.pose(magnification, 0, 0));
+                    });
+                    for (Player player : plugin.getServer().getOnlinePlayers()) {
+                        if (packs.hasPack(player)) {
+                            player.showEntity(plugin, display);
+                        }
+                    }
+                    parts.add(display);
+                }
+                previous = null;
+            }
+            if (!blockViewer) {
+                removeBlocks();
+            } else if (pieces.isEmpty() || pieces.stream().anyMatch(piece -> !piece.isValid())) {
+                removeBlocks();
+                for (HollowModel.Piece piece : blockPieces) {
                     pieces.add(feet.getWorld().spawn(feet, BlockDisplay.class, display -> {
                         display.setBlock(piece.material().createBlockData());
                         display.setPersistent(false);
@@ -249,33 +333,61 @@ final class HollowVisuals implements Listener {
                         }
                         display.setTransformation(piece.pose(magnification, 0, 0));
                     }));
+                    applyVisibility(pieces.getLast(), false);
                 }
                 previous = null;
             }
             boolean moved = !feet.equals(previous);
-            for (int i = 0; i < pieces.size(); i++) {
-                BlockDisplay display = pieces.get(i);
-                HollowModel.Piece piece = model.pieces().get(i);
+            for (int i = 0; i < parts.size(); i++) {
+                ItemDisplay display = parts.get(i);
+                HollowModel.Part part = model.parts().get(i);
                 if (moved) {
                     display.teleport(feet);
                 }
-                float swing = switch (piece.joint()) {
-                    case BODY -> 0;
-                    case LEFT_ARM, RIGHT_LEG -> step * .30f;
-                    case RIGHT_ARM, LEFT_LEG -> -step * .30f;
-                    case TAIL -> pulse * .11f + step * .075f;
-                    case HEAD -> pulse * .05f;
-                };
-                display.setTransformation(piece.pose(scale, lift, swing));
+                display.setTransformation(part.pose(scale, lift, swing(part.joint(), step, pulse)));
+                display.setInterpolationDelay(0);
+            }
+            for (int i = 0; i < pieces.size(); i++) {
+                BlockDisplay display = pieces.get(i);
+                HollowModel.Piece piece = blockPieces.get(i);
+                if (moved) {
+                    display.teleport(feet);
+                }
+                display.setTransformation(piece.pose(scale, lift, swing(piece.joint(), step, pulse)));
                 display.setInterpolationDelay(0);
             }
             previous = feet;
         }
 
+        private static float swing(HollowModel.Joint joint, float step, float pulse) {
+            return switch (joint) {
+                case BODY -> 0;
+                case LEFT_ARM, RIGHT_LEG -> step * .30f;
+                case RIGHT_ARM, LEFT_LEG -> -step * .30f;
+                case TAIL -> pulse * .11f + step * .075f;
+                case HEAD -> pulse * .05f;
+            };
+        }
+
+        private void removeParts() {
+            if (!parts.isEmpty()) {
+                parts.forEach(ItemDisplay::remove);
+                parts.clear();
+                previous = null;
+            }
+        }
+
+        private void removeBlocks() {
+            if (!pieces.isEmpty()) {
+                pieces.forEach(BlockDisplay::remove);
+                pieces.clear();
+                previous = null;
+            }
+        }
+
         private void removePieces() {
-            pieces.forEach(BlockDisplay::remove);
-            pieces.clear();
-            previous = null;
+            removeParts();
+            removeBlocks();
         }
     }
 }

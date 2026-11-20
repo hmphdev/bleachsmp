@@ -7,7 +7,9 @@ import dev.bleachsmp.command.BleachCommand;
 import dev.bleachsmp.faction.Faction;
 import dev.bleachsmp.faction.FactionMenu;
 import dev.bleachsmp.item.StarterItems;
+import dev.bleachsmp.hueco.HollowPackAssets;
 import dev.bleachsmp.hueco.HuecoMundoService;
+import dev.bleachsmp.pack.ResourcePackService;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
@@ -48,6 +50,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
     private FactionMenu factionMenu;
     private HuecoMundoService huecoMundo;
     private AwakeningService awakenings;
+    private ResourcePackService resourcePacks;
 
     @Override
     public void onEnable() {
@@ -74,6 +77,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
         awakenings.crisis().start();
         getServer().getPluginManager().registerEvents(awakenings.pressure(), this);
         awakenings.pressure().start();
+        resourcePacks = new ResourcePackService(this, HollowPackAssets.files());
         huecoMundo = new HuecoMundoService(this);
         getServer().getPluginManager().registerEvents(huecoMundo, this);
         huecoMundo.initialize();
@@ -102,6 +106,13 @@ public final class BleachSmpPlugin extends JavaPlugin {
         if (huecoMundo != null) {
             huecoMundo.shutdown();
         }
+        if (resourcePacks != null) {
+            resourcePacks.shutdown();
+        }
+    }
+
+    public ResourcePackService resourcePacks() {
+        return resourcePacks;
     }
 
     public HuecoMundoService huecoMundo() {
