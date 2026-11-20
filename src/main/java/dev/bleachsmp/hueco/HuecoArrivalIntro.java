@@ -25,7 +25,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 final class HuecoArrivalIntro implements Listener {
     private static final int CAMERA_WARMUP_TICKS = 12;
-    private static final int TRACKING_TIMEOUT_TICKS = 100;
+    private static final int TRACKING_TIMEOUT_TICKS = 300;
     private static final int FRAME_TICKS = 3;
     private static final int SHOT_TICKS = 108;
     private static final Title ARRIVAL_TITLE = Title.title(
@@ -75,10 +75,14 @@ final class HuecoArrivalIntro implements Listener {
             return;
         }
         if (!shot.started) {
-            // The client ignores the camera packet until it has received the display entity.
+            // The client ignores the camera packet until it has received the display entity. Slow clients can take a
+            // while to load a new world, so hold the player at the arrival point instead of giving up when they move.
             if (player.getLocation().distanceSquared(shot.arrival) > 9.0) {
-                finish(shot, false);
-                return;
+                if (player.getLocation().distanceSquared(shot.arrival) > 64.0 * 64.0) {
+                    finish(shot, false);
+                    return;
+                }
+                player.teleport(shot.arrival);
             }
             if (!shot.camera.isTrackedBy(player)) {
                 shot.waited += FRAME_TICKS;
