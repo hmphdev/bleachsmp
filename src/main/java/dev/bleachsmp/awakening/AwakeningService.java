@@ -35,7 +35,7 @@ public final class AwakeningService {
 
     public AwakeningService(BleachSmpPlugin plugin) {
         this.plugin = plugin;
-        powers = new AwakeningPowers(plugin, this);
+        powers = new AwakeningPowers(this);
         releases = new ReleaseService(plugin, this);
         firstKey = new NamespacedKey(plugin, "first_awakening");
         advancedKey = new NamespacedKey(plugin, "advanced_awakening");
@@ -146,7 +146,8 @@ public final class AwakeningService {
         data.remove(evidenceKey);
         player.sendMessage(Component.text("Awakening unlocked: " + formName(faction(player), advanced) + " — "
                 + powerName(player, faction(player), style, advanced) + "!", NamedTextColor.GOLD));
-        player.sendMessage(Component.text("Hold your faction starter item and press swap hands (F) to release it.",
+        player.sendMessage(Component.text("Hold your faction starter item and press swap hands (F) to release it."
+                + (advanced ? " While it is out, F fires its ultimate and sneak + F seals it." : ""),
                 NamedTextColor.YELLOW));
     }
 
@@ -190,10 +191,17 @@ public final class AwakeningService {
                     NamedTextColor.YELLOW));
             return;
         }
-        if (releases.seal(player, true)) {
-            // Pressing release again while a first form is out seals it early; the release cooldown starts now.
+        if (releases.isActive(player)) {
+            boolean activeAdvanced = releases.isAdvanced(player);
+            // While an advanced form is out, release fires its ultimate; sneaking seals it instead.
+            if (activeAdvanced && !player.isSneaking()) {
+                releases.ultimate(player);
+                return;
+            }
+            // Sealing early starts that tier's release cooldown now.
+            releases.seal(player, true);
             player.getPersistentDataContainer().set(releaseReadyKey, PersistentDataType.LONG,
-                    System.currentTimeMillis() + releaseCooldown(false) * 1000L);
+                    System.currentTimeMillis() + releaseCooldown(activeAdvanced) * 1000L);
             return;
         }
         boolean advanced = advancedRequested == null ? unlocked(player, true) != null : advancedRequested;
@@ -217,25 +225,13 @@ public final class AwakeningService {
             return;
         }
         Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
-        if (!advanced) {
-            releases.release(player, faction, style, trait);
-            if (trait != null) {
-                AwakeningPowers.applyTrait(player, trait);
-            }
-            // The release cooldown starts once the form would seal on its own.
-            data.set(releaseReadyKey, PersistentDataType.LONG,
-                    now + (releases.durationSeconds() + releaseCooldown(false)) * 1000L);
-            return;
-        }
-        if (!powers.cast(player, faction, style, advanced)) {
-            return;
-        }
+        releases.release(player, faction, style, trait, advanced);
         if (trait != null) {
             AwakeningPowers.applyTrait(player, trait);
         }
-        data.set(releaseReadyKey, PersistentDataType.LONG, now + releaseCooldown(advanced) * 1000L);
-        player.sendMessage(Component.text(formName(faction, advanced) + " — " + powerName(player, faction, style, advanced) + "!",
-                faction.color()));
+        // The release cooldown starts once the form would seal on its own.
+        data.set(releaseReadyKey, PersistentDataType.LONG,
+                now + (releases.durationSeconds(advanced) + releaseCooldown(advanced)) * 1000L);
     }
 
     private int releaseCooldown(boolean advanced) {
@@ -244,14 +240,12 @@ public final class AwakeningService {
     }
 
     private static String powerName(Player player, Faction faction, Playstyle style, boolean advanced) {
-        return !advanced ? ReleaseService.form(player.getUniqueId(), faction, style).name()
-                : AwakeningPowers.name(style, advanced);
+        return ReleaseService.form(player.getUniqueId(), faction, style, advanced).name();
     }
 
     private static String powerDescription(Player player, Faction faction, Playstyle style, Playstyle trait,
             boolean advanced) {
-        return !advanced ? ReleaseService.description(player.getUniqueId(), faction, style, trait)
-                : AwakeningPowers.description(style, advanced);
+        return ReleaseService.description(player.getUniqueId(), faction, style, trait, advanced);
     }
 
     boolean holdsStarter(Player player) {

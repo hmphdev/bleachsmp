@@ -266,9 +266,80 @@ public final class ReleaseService implements Listener {
         };
     }
 
-    /** The form variant (0 or 1) a player gets for a playstyle. Stable per player, spread evenly. */
-    static int variant(UUID id, Playstyle style) {
-        return (int) (hash(id, style.ordinal() + 1) & 1);
+    // ---------------------------------------------------------------- advanced forms
+
+    /** Advanced form names, indexed [variant][playstyle ordinal]. */
+    private static String[][] advancedNames(Faction faction) {
+        return switch (faction) {
+            case SOUL_REAPER -> new String[][] {
+                {"Akagetsu Tenrō", "Kagerō Mugenkyō", "Ryūsei Gingaō", "Hayate Tenkū", "Iwagane Daichiō", "Mamorigami Kekkaiden"},
+                {"Homuramaru Gōen", "Oboromaru Yumeutsutsu", "Amagumo Raiu", "Kumokiri Shippū", "Iwaoni Senzan", "Kusarigami Shinbaku"}};
+            case HOLLOW -> new String[][] {
+                {"Lobo Carmesí Rey", "Espejismo Eterno", "Halcón Negro Abismal", "Tormenta Hueca", "Coloso Titán", "Caparazón Sagrado"},
+                {"Tiburón Abisal", "Sombra Infinita", "Escorpión Rey", "Águila Tempestad", "Osario Imperial", "Araña Reina"}};
+            case QUINCY -> new String[][] {
+                {"Sturmengel", "Spiegelengel", "Sternengel", "Himmelsflügel", "Bollwerkengel", "Heiligenschein"},
+                {"Zornflügel", "Trugbild", "Sintflut", "Zenitflug", "Säulenthron", "Bandengel"}};
+            case FULLBRINGER -> new String[][] {
+                {"Crimson Knuckle Overdrive", "Mirror Coat Infinite", "Bullet Echo Arsenal", "Sky Runner Ascension",
+                        "Iron Maker Foundry", "Heart Lock Sanctuary"},
+                {"Rewind Blade Zero", "Shuffle Deck Joker", "Echo Rain Storm", "Meteor Boots Impact",
+                        "Forge Ground Colossus", "Lifeline Eternal"}};
+        };
+    }
+
+    private static String advancedCallout(Faction faction, String name) {
+        return switch (faction) {
+            case SOUL_REAPER -> "Bankai! " + name + "!";
+            case HOLLOW -> "Segunda Etapa — " + name + "!";
+            case QUINCY -> "Vollständig: " + name + "!";
+            case FULLBRINGER -> "Complete Fullbring: " + name + "!";
+        };
+    }
+
+    static Form form(Faction faction, Playstyle style, int variant, boolean advanced) {
+        Form base = form(faction, style, variant);
+        if (!advanced) {
+            return base;
+        }
+        String name = advancedNames(faction)[variant][style.ordinal()];
+        return new Form(name, advancedCallout(faction, name), base.color(), base.text(), base.bar());
+    }
+
+    /** The advanced form's once-per-release ultimate, set by its playstyle. */
+    static String ultimateName(Faction faction, Playstyle style) {
+        String[] names = switch (faction) {
+            case SOUL_REAPER -> new String[] {"Heaven-Rending Moon", "Thousand Mirage Execution", "Galaxy Fall",
+                    "Divine Tempest", "World Breaker", "Sanctum of Light"};
+            case HOLLOW -> new String[] {"Desgarro Final", "Ejecución Fantasma", "Lluvia del Abismo", "Huracán Hueco",
+                    "Fin del Mundo", "Santuario Vacío"};
+            case QUINCY -> new String[] {"Heiliges Gericht", "Phantomhinrichtung", "Sternenflut", "Himmelssturm",
+                    "Weltbrecher", "Lichtdom"};
+            case FULLBRINGER -> new String[] {"Final Knuckle", "Grand Shuffle", "Full Clip Storm", "Stratosphere Drop",
+                    "Foundry Quake", "Lifeline Sanctuary"};
+        };
+        return names[style.ordinal()];
+    }
+
+    static String ultimateDescription(Playstyle style) {
+        return switch (style) {
+            case VANGUARD -> "two volleys of three giant waves";
+            case MIRAGE -> "strike up to five enemies in sequence from behind, then return";
+            case MARKSMAN -> "a 26-bolt storm over a wide area";
+            case WAYFARER -> "a three-second tornado that drags enemies in and hurls them skyward";
+            case ARTIFICER -> "three expanding rings of erupting pillars";
+            case KEEPER -> "an eight-second sanctum that heals allies and grinds down enemies inside it";
+        };
+    }
+
+    // ---------------------------------------------------------------- kit selection
+
+    /**
+     * The form variant (0 or 1) a player gets for a playstyle. Stable per player and spread evenly. First and
+     * advanced forms roll separately, so a player's Bankai doesn't simply mirror their Shikai.
+     */
+    static int variant(UUID id, Playstyle style, boolean advanced) {
+        return (int) (hash(id, style.ordinal() + 1 + (advanced ? 32 : 0)) & 1);
     }
 
     private static long hash(UUID id, int salt) {
@@ -280,41 +351,49 @@ public final class ReleaseService implements Listener {
         return h;
     }
 
-    static Form form(UUID id, Faction faction, Playstyle style) {
-        return form(faction, style, variant(id, style));
+    static Form form(UUID id, Faction faction, Playstyle style, boolean advanced) {
+        return form(faction, style, variant(id, style, advanced), advanced);
     }
 
-    static Mechanic primary(UUID id, Playstyle style) {
-        return Mechanic.of(style, variant(id, style));
+    static Mechanic primary(UUID id, Playstyle style, boolean advanced) {
+        return Mechanic.of(style, variant(id, style, advanced));
     }
 
     /**
      * Secondary technique: from the secondary playstyle if there is one. Players without one draw a stable
      * pick from all the other techniques, so they don't all share the same fallback.
      */
-    static Mechanic secondary(UUID id, Playstyle style, Playstyle trait) {
+    static Mechanic secondary(UUID id, Playstyle style, Playstyle trait, boolean advanced) {
         if (trait != null && trait != style) {
-            return Mechanic.of(trait, variant(id, trait));
+            return Mechanic.of(trait, variant(id, trait, advanced));
         }
-        Mechanic main = primary(id, style);
+        Mechanic main = primary(id, style, advanced);
         Mechanic[] all = Mechanic.values();
-        int pick = (int) Math.floorMod(hash(id, 101), (long) (all.length - 1));
+        int pick = (int) Math.floorMod(hash(id, advanced ? 133 : 101), (long) (all.length - 1));
         return all[pick >= main.ordinal() ? pick + 1 : pick];
     }
 
-    static String description(UUID id, Faction faction, Playstyle style, Playstyle trait) {
-        Form form = form(id, faction, style);
-        Mechanic main = primary(id, style);
-        Mechanic second = secondary(id, style, trait);
-        return "\"" + form.callout() + "\" A timed release. Right-click: " + techniqueName(faction, main) + " — "
+    static String description(UUID id, Faction faction, Playstyle style, Playstyle trait, boolean advanced) {
+        Form form = form(id, faction, style, advanced);
+        Mechanic main = primary(id, style, advanced);
+        Mechanic second = secondary(id, style, trait, advanced);
+        String text = "\"" + form.callout() + "\" A timed release. Right-click: " + techniqueName(faction, main) + " — "
                 + main.description + ". Sneak + right-click: " + techniqueName(faction, second) + " — "
                 + second.description + ". " + Theme.of(faction).onHit;
+        if (advanced) {
+            text += " Techniques hit harder. F (once per release): " + ultimateName(faction, style) + " — "
+                    + ultimateDescription(style) + ". Sneak + F seals.";
+        }
+        return text;
     }
 
     // ---------------------------------------------------------------- state
 
     private static final class Release {
         final Faction faction;
+        final Playstyle style;
+        final boolean advanced;
+        final double power;
         final Form form;
         final Theme theme;
         final Mechanic main;
@@ -325,9 +404,14 @@ public final class ReleaseService implements Listener {
         BukkitTask task;
         long mainReadyAt;
         long secondReadyAt;
+        boolean ultimateUsed;
 
-        Release(Faction faction, Form form, Mechanic main, Mechanic second, long startedAt, long endsAt, BossBar bar) {
+        Release(Faction faction, Playstyle style, boolean advanced, double power, Form form, Mechanic main,
+                Mechanic second, long startedAt, long endsAt, BossBar bar) {
             this.faction = faction;
+            this.style = style;
+            this.advanced = advanced;
+            this.power = power;
             this.form = form;
             this.theme = Theme.of(faction);
             this.main = main;
@@ -352,8 +436,19 @@ public final class ReleaseService implements Listener {
         return active.containsKey(player.getUniqueId());
     }
 
-    int durationSeconds() {
-        return Math.clamp(plugin.getConfig().getInt("awakenings.release.duration-seconds", 30), 5, 300);
+    boolean isAdvanced(Player player) {
+        Release release = active.get(player.getUniqueId());
+        return release != null && release.advanced;
+    }
+
+    /** Reads a setting from {@code awakenings.release} or {@code awakenings.advanced-release}. */
+    private int setting(boolean advanced, String key, int fallback, int min, int max) {
+        return Math.clamp(plugin.getConfig().getInt("awakenings." + (advanced ? "advanced-release." : "release.") + key,
+                fallback), min, max);
+    }
+
+    int durationSeconds(boolean advanced) {
+        return setting(advanced, "duration-seconds", advanced ? 40 : 30, 5, 300);
     }
 
     private double damage(double base) {
@@ -362,43 +457,55 @@ public final class ReleaseService implements Listener {
 
     // ---------------------------------------------------------------- release
 
-    /** Releases the first form: the call-out, the faction's release burst, and the timed released state. */
-    void release(Player player, Faction faction, Playstyle style, Playstyle trait) {
+    /** Releases a form: the call-out, the faction's release burst, and the timed released state. */
+    void release(Player player, Faction faction, Playstyle style, Playstyle trait, boolean advanced) {
         seal(player, false);
         UUID id = player.getUniqueId();
-        Form form = form(id, faction, style);
+        Form form = form(id, faction, style, advanced);
         Theme theme = Theme.of(faction);
         long now = System.currentTimeMillis();
-        int seconds = durationSeconds();
-        BossBar bar = BossBar.bossBar(Component.text(AwakeningService.formName(faction, false) + " — " + form.name(),
-                form.text(), TextDecoration.BOLD), 1.0f, form.bar(), BossBar.Overlay.NOTCHED_10);
-        Release release = new Release(faction, form, primary(id, style), secondary(id, style, trait), now,
-                now + seconds * 1000L, bar);
+        int seconds = durationSeconds(advanced);
+        double power = advanced ? Math.clamp(plugin.getConfig().getDouble("awakenings.advanced-release.power", 1.4),
+                0.0, 5.0) : 1.0;
+        String tier = AwakeningService.formName(faction, advanced);
+        BossBar bar = BossBar.bossBar(Component.text(tier + " — " + form.name(), form.text(), TextDecoration.BOLD),
+                1.0f, form.bar(), advanced ? BossBar.Overlay.NOTCHED_20 : BossBar.Overlay.NOTCHED_10);
+        Release release = new Release(faction, style, advanced, power, form, primary(id, style, advanced),
+                secondary(id, style, trait, advanced), now, now + seconds * 1000L, bar);
         active.put(id, release);
 
         Location loc = player.getLocation();
         Component callout = Component.text(player.getName() + ": ", NamedTextColor.GRAY)
-                .append(Component.text("\"" + form.callout() + "\"", form.text(), TextDecoration.ITALIC));
-        for (Player nearby : loc.getNearbyPlayers(32)) {
+                .append(Component.text("\"" + form.callout() + "\"", form.text(),
+                        advanced ? TextDecoration.BOLD : TextDecoration.ITALIC));
+        for (Player nearby : loc.getNearbyPlayers(advanced ? 64 : 32)) {
             nearby.sendMessage(callout);
         }
-        player.showTitle(Title.title(Component.text(form.name(), form.text(), TextDecoration.BOLD),
-                Component.text(AwakeningService.formName(faction, false), NamedTextColor.WHITE),
-                Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1400), Duration.ofMillis(500))));
+        player.showTitle(Title.title(Component.text(advanced ? tier.toUpperCase(java.util.Locale.ROOT) : form.name(),
+                        advanced ? NamedTextColor.WHITE : form.text(), TextDecoration.BOLD),
+                Component.text(advanced ? form.name() : tier, advanced ? form.text() : NamedTextColor.WHITE),
+                Title.Times.times(Duration.ofMillis(advanced ? 300 : 150), Duration.ofMillis(advanced ? 2200 : 1400),
+                        Duration.ofMillis(600))));
         player.sendMessage(Component.text("Right-click: " + techniqueName(faction, release.main)
-                + "  |  Sneak + right-click: " + techniqueName(faction, release.second), form.text()));
+                + "  |  Sneak + right-click: " + techniqueName(faction, release.second)
+                + (advanced ? "  |  F: " + ultimateName(faction, style) + "  |  Sneak + F: seal" : ""), form.text()));
         player.showBossBar(bar);
-        player.addPotionEffect(new PotionEffect(theme.passive, seconds * 20, theme.passiveAmplifier, false, false, true));
+        player.addPotionEffect(new PotionEffect(theme.passive, seconds * 20, theme.passiveAmplifier + (advanced ? 1 : 0),
+                false, false, true));
 
-        releaseSounds(loc, theme);
-        Vfx.shockwave(plugin, loc, form.color(), 5.0, 8);
-        // Spiritual pressure: push nearby enemies away without damaging them.
-        for (LivingEntity entity : loc.getNearbyLivingEntities(5)) {
-            if (service.canStrike(player, entity)) {
-                entity.setVelocity(outward(loc, entity).multiply(0.9).setY(0.35));
+        if (advanced) {
+            advancedEntrance(player, release);
+        } else {
+            releaseSounds(loc, theme);
+            Vfx.shockwave(plugin, loc, form.color(), 5.0, 8);
+            // Spiritual pressure: push nearby enemies away without damaging them.
+            for (LivingEntity entity : loc.getNearbyLivingEntities(5)) {
+                if (service.canStrike(player, entity)) {
+                    entity.setVelocity(outward(loc, entity).multiply(0.9).setY(0.35));
+                }
             }
+            releaseAnimation(player, form, theme);
         }
-        releaseAnimation(player, form, theme);
 
         release.task = new BukkitRunnable() {
             int tick;
@@ -414,6 +521,9 @@ public final class ReleaseService implements Listener {
                 release.bar.progress((float) Math.clamp(
                         (release.endsAt - time) / (double) (release.endsAt - release.startedAt), 0.0, 1.0));
                 aura(player, release, tick);
+                if (release.advanced) {
+                    advancedAura(player, release, tick);
+                }
                 if (tick % 10 == 0) {
                     showCooldowns(player, release, time);
                 }
@@ -425,7 +535,13 @@ public final class ReleaseService implements Listener {
     private static void showCooldowns(Player player, Release release, long now) {
         player.sendActionBar(cooldown(techniqueName(release.faction, release.main), release.mainReadyAt, now, release)
                 .append(Component.text("   |   Sneak: ", NamedTextColor.DARK_GRAY))
-                .append(cooldown(techniqueName(release.faction, release.second), release.secondReadyAt, now, release)));
+                .append(cooldown(techniqueName(release.faction, release.second), release.secondReadyAt, now, release))
+                .append(release.advanced ? Component.text("   |   F: ", NamedTextColor.DARK_GRAY)
+                        .append(release.ultimateUsed
+                                ? Component.text(ultimateName(release.faction, release.style) + " spent", NamedTextColor.GRAY)
+                                : Component.text(ultimateName(release.faction, release.style) + " ✔", release.form.text(),
+                                        TextDecoration.BOLD))
+                        : Component.empty()));
     }
 
     private static Component cooldown(String name, long readyAt, long now, Release release) {
@@ -621,9 +737,9 @@ public final class ReleaseService implements Listener {
         if (!used) {
             return;
         }
-        int cooldown = Math.clamp(plugin.getConfig().getInt(secondary
-                ? "awakenings.release.secondary-technique-cooldown-seconds"
-                : "awakenings.release.technique-cooldown-seconds", secondary ? 10 : 6), 0, 600);
+        int cooldown = setting(release.advanced,
+                secondary ? "secondary-technique-cooldown-seconds" : "technique-cooldown-seconds",
+                release.advanced ? (secondary ? 8 : 5) : (secondary ? 10 : 6), 0, 600);
         if (secondary) {
             release.secondReadyAt = now + cooldown * 1000L;
         } else {
@@ -634,7 +750,7 @@ public final class ReleaseService implements Listener {
 
     /** Damages a target and applies the faction's on-hit effect with a small impact flash. */
     private void hit(Player caster, LivingEntity target, double amount, Release release) {
-        target.damage(damage(amount), caster);
+        target.damage(damage(amount) * release.power, caster);
         Location at = target.getLocation().add(0, target.getHeight() / 2, 0);
         at.getWorld().spawnParticle(release.theme.accent, at, 8, 0.3, 0.3, 0.3, 0.05);
         Vfx.burst(at, release.form.color(), 8, 0.3, 1.2f);
@@ -661,10 +777,13 @@ public final class ReleaseService implements Listener {
     }
 
     private boolean wave(Player player, Release release) {
-        Location origin = player.getEyeLocation().subtract(0, 0.35, 0);
-        Vector forward = origin.getDirection().normalize();
-        Set<UUID> hit = new HashSet<>();
-        switch (release.theme) {
+        waveSound(player.getEyeLocation(), release.theme);
+        launchWave(player, release, player.getEyeLocation().getDirection(), release.advanced ? 2.6 : 2.0, 8.0);
+        return true;
+    }
+
+    private static void waveSound(Location origin, Theme theme) {
+        switch (theme) {
             case SOUL_REAPER -> {
                 Vfx.sound(origin, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0f, 0.5f);
                 Vfx.sound(origin, Sound.ENTITY_WITHER_SHOOT, 0.5f, 1.8f);
@@ -682,6 +801,13 @@ public final class ReleaseService implements Listener {
                 Vfx.sound(origin, Sound.ITEM_MACE_SMASH_AIR, 1.0f, 0.9f);
             }
         }
+    }
+
+    /** A travelling wave: a crescent (three claw marks for Hollows) that hits each enemy once. */
+    private void launchWave(Player player, Release release, Vector direction, double size, double amount) {
+        Location origin = player.getEyeLocation().subtract(0, 0.35, 0);
+        Vector forward = direction.clone().normalize();
+        Set<UUID> hit = new HashSet<>();
         new BukkitRunnable() {
             int step;
 
@@ -696,25 +822,24 @@ public final class ReleaseService implements Listener {
                 }
                 if (release.theme == Theme.HOLLOW) {
                     for (double y = -0.55; y <= 0.56; y += 0.55) {
-                        Vfx.arc(center, forward, 1.5, release.form.color(), 1.4f, y);
+                        Vfx.arc(center, forward, size * 0.75, release.form.color(), 1.4f, y);
                     }
                 } else {
-                    Vfx.arc(center, forward, 2.0, release.form.color(), 1.8f, 0);
+                    Vfx.arc(center, forward, size, release.form.color(), 1.8f, 0);
                 }
                 center.getWorld().spawnParticle(release.theme.accent, center, 4, 0.5, 0.3, 0.5, 0.02);
                 if (release.theme == Theme.SOUL_REAPER) {
                     center.getWorld().spawnParticle(Particle.SWEEP_ATTACK, center, 1);
                 }
-                for (LivingEntity entity : center.getNearbyLivingEntities(2.1)) {
+                for (LivingEntity entity : center.getNearbyLivingEntities(size + 0.1)) {
                     if (hit.add(entity.getUniqueId()) && service.canStrike(player, entity)) {
-                        hit(player, entity, 8.0, release);
+                        hit(player, entity, amount, release);
                         entity.setVelocity(forward.clone().multiply(0.6).setY(0.3));
                     }
                 }
                 step++;
             }
         }.runTaskTimer(plugin, 0L, 1L);
-        return true;
     }
 
     private LivingEntity aimedEnemy(Player player, double range) {
@@ -1055,27 +1180,39 @@ public final class ReleaseService implements Listener {
 
     /** Call down a storm of bolts on the area the player aims at. */
     private boolean rain(Player player, Release release) {
-        var aim = player.rayTraceBlocks(24);
-        Location center = aim != null ? aim.getHitPosition().toLocation(player.getWorld())
-                : player.getLocation().add(horizontal(player).multiply(12));
-        Location ground = groundAt(center);
-        Location target = ground != null ? ground : center;
-        Vfx.ring(target.clone().add(0, 0.15, 0), 3.2, 32, release.form.color(), 1.3f);
+        Location target = aimPoint(player, 24);
         castSound(player.getLocation(), release.theme, 0.6f);
         Vfx.sound(target, Sound.ITEM_TRIDENT_THUNDER, 0.6f, 1.6f);
+        storm(player, release, target, release.advanced ? 4.0 : 3.2, 10, 3.0, 3, 3L);
+        return true;
+    }
+
+    /** The ground spot the player is aiming at, up to {@code range} blocks away. */
+    private static Location aimPoint(Player player, double range) {
+        var aim = player.rayTraceBlocks(range);
+        Location center = aim != null ? aim.getHitPosition().toLocation(player.getWorld())
+                : player.getLocation().add(horizontal(player).multiply(range / 2));
+        Location ground = groundAt(center);
+        return ground != null ? ground : center;
+    }
+
+    /** Drops {@code bolts} bolts at random inside a circle; each entity can be hit at most {@code cap} times. */
+    private void storm(Player player, Release release, Location target, double radius, int bolts, double amount,
+            int cap, long period) {
+        Vfx.ring(target.clone().add(0, 0.15, 0), radius, (int) (radius * 10), release.form.color(), 1.3f);
         Map<UUID, Integer> hits = new HashMap<>();
         new BukkitRunnable() {
             int bolt;
 
             @Override
             public void run() {
-                if (!player.isOnline() || bolt++ >= 10) {
+                if (!player.isOnline() || bolt++ >= bolts) {
                     cancel();
                     return;
                 }
                 ThreadLocalRandom random = ThreadLocalRandom.current();
                 double a = random.nextDouble(Math.PI * 2);
-                double d = Math.sqrt(random.nextDouble()) * 3.2;
+                double d = Math.sqrt(random.nextDouble()) * radius;
                 Location spot = target.clone().add(Math.cos(a) * d, 0, Math.sin(a) * d);
                 Location floor = groundAt(spot);
                 Location impact = floor != null ? floor : spot;
@@ -1086,15 +1223,14 @@ public final class ReleaseService implements Listener {
                         : Sound.ENTITY_ARROW_HIT, 0.8f, 1.2f + random.nextFloat() * 0.4f);
                 for (LivingEntity entity : impact.getNearbyLivingEntities(1.5)) {
                     int count = hits.getOrDefault(entity.getUniqueId(), 0);
-                    if (count < 3 && service.canStrike(player, entity)) {
+                    if (count < cap && service.canStrike(player, entity)) {
                         hits.put(entity.getUniqueId(), count + 1);
                         entity.setNoDamageTicks(0);
-                        hit(player, entity, 3.0, release);
+                        hit(player, entity, amount, release);
                     }
                 }
             }
-        }.runTaskTimer(plugin, 6L, 3L);
-        return true;
+        }.runTaskTimer(plugin, 6L, period);
     }
 
     /** Leap high, hang for a moment, then dive into a crushing shockwave. No fall damage. */
@@ -1242,6 +1378,434 @@ public final class ReleaseService implements Listener {
         Vfx.sound(center, Sound.BLOCK_CHAIN_HIT, 1.0f, 0.8f);
         castSound(center, release.theme, 0.8f);
         Vfx.ring(center.clone().add(0, 0.1, 0), 1.0, 14, release.form.color(), 1.2f);
+        return true;
+    }
+
+    // ---------------------------------------------------------------- advanced: entrance and aura
+
+    /** The advanced transformation: a two-second eruption of reiatsu with a faction-specific signature. */
+    private void advancedEntrance(Player player, Release release) {
+        Location loc = player.getLocation();
+        Color dark = Color.fromRGB(18, 12, 22);
+        switch (release.theme) {
+            case SOUL_REAPER -> {
+                Vfx.sound(loc, Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 0.6f);
+                Vfx.sound(loc, Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.4f);
+                Vfx.sound(loc, Sound.ITEM_TRIDENT_THUNDER, 1.0f, 0.8f);
+            }
+            case HOLLOW -> {
+                Vfx.sound(loc, Sound.ENTITY_WARDEN_EMERGE, 1.0f, 1.2f);
+                Vfx.sound(loc, Sound.ENTITY_WITHER_SPAWN, 0.5f, 1.2f);
+            }
+            case QUINCY -> {
+                Vfx.sound(loc, Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.2f);
+                Vfx.sound(loc, Sound.BLOCK_CONDUIT_ACTIVATE, 1.0f, 1.0f);
+                Vfx.sound(loc, Sound.ITEM_TRIDENT_THUNDER, 0.8f, 1.4f);
+            }
+            case FULLBRINGER -> {
+                Vfx.sound(loc, Sound.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, 1.0f, 0.8f);
+                Vfx.sound(loc, Sound.ITEM_TOTEM_USE, 0.8f, 1.2f);
+                Vfx.sound(loc, Sound.BLOCK_ANVIL_LAND, 0.7f, 0.6f);
+            }
+        }
+        // Spiritual pressure: enemies are thrown back, and enemy players are briefly swallowed by darkness.
+        for (LivingEntity entity : loc.getNearbyLivingEntities(8)) {
+            if (service.canStrike(player, entity)) {
+                entity.setVelocity(outward(loc, entity).multiply(1.2).setY(0.45));
+                if (entity instanceof Player) {
+                    entity.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 60, 0));
+                }
+            }
+        }
+        new BukkitRunnable() {
+            int tick;
+
+            @Override
+            public void run() {
+                if (!player.isOnline() || tick > 40) {
+                    cancel();
+                    return;
+                }
+                Location base = player.getLocation();
+                var world = base.getWorld();
+                // A pillar of reiatsu, coloured with a dark core, that grows to ten blocks.
+                double top = Math.min(10, tick * 0.5);
+                for (double h = 0; h <= top; h += 0.7) {
+                    double a = tick * 0.4 + h;
+                    world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 0.7, h, Math.sin(a) * 0.7), 1,
+                            0.05, 0.05, 0.05, 0, release.form.dust(1.8f));
+                    if (release.theme != Theme.QUINCY) {
+                        world.spawnParticle(Particle.DUST, base.clone().add(-Math.cos(a) * 0.4, h, -Math.sin(a) * 0.4), 1,
+                                0.05, 0.05, 0.05, 0, Vfx.dust(dark, 1.6f));
+                    }
+                }
+                world.spawnParticle(release.theme.accent, base.clone().add(0, 1, 0), 6, 0.6, 1.0, 0.6, 0.05);
+                if (tick == 0) {
+                    // A bolt of light from the sky, drawn with particles so it is not heard server-wide.
+                    Vfx.line(base.clone().add(0, 18, 0), base, release.theme == Theme.HOLLOW ? dark : Color.WHITE, 1.6f, 0.4);
+                    world.spawnParticle(Particle.SONIC_BOOM, base.clone().add(0, 1, 0), 1);
+                }
+                if (tick == 20) {
+                    Vfx.shockwave(plugin, base, release.form.color(), 9.0, 12);
+                    Vfx.burst(base.clone().add(0, 1, 0), release.form.color(), 80, 1.2, 2.0f);
+                    world.spawnParticle(Particle.EXPLOSION, base.clone().add(0, 1, 0), 3, 0.8, 0.5, 0.8, 0);
+                    Vfx.sound(base, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 0.7f);
+                    if (release.theme == Theme.FULLBRINGER) {
+                        world.spawnParticle(Particle.TOTEM_OF_UNDYING, base.clone().add(0, 1, 0), 80, 0.6, 0.8, 0.6, 0.6);
+                    } else if (release.theme == Theme.HOLLOW) {
+                        world.spawnParticle(Particle.SCULK_SOUL, base.clone().add(0, 1, 0), 30, 1.0, 1.0, 1.0, 0.08);
+                    }
+                }
+                tick++;
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    /** Extra aura while an advanced form is out: wings, horns, armour plates, or dark rising reiatsu. */
+    private static void advancedAura(Player player, Release release, int tick) {
+        Location base = player.getLocation();
+        var world = base.getWorld();
+        double yaw = Math.toRadians(base.getYaw());
+        Vector forward = new Vector(-Math.sin(yaw), 0, Math.cos(yaw));
+        Vector right = new Vector(-Math.cos(yaw), 0, -Math.sin(yaw));
+        switch (release.theme) {
+            case QUINCY -> {
+                if (tick % 4 != 0) {
+                    return;
+                }
+                // Two flapping wings of light behind the shoulders.
+                double flap = 1 - 0.18 * Math.sin(tick * 0.25);
+                for (int side = -1; side <= 1; side += 2) {
+                    for (int row = 0; row < 2; row++) {
+                        int points = row == 0 ? 10 : 7;
+                        for (int i = 0; i < points; i++) {
+                            double t = i / (double) (points - 1);
+                            Location point = base.clone().add(0, 1.35 - row * 0.35 + Math.sin(t * Math.PI) * 0.75 - t * 0.35, 0)
+                                    .add(forward.clone().multiply(-(0.35 + t * 0.25)))
+                                    .add(right.clone().multiply(side * (0.25 + t * (row == 0 ? 1.7 : 1.2) * flap)));
+                            world.spawnParticle(Particle.DUST, point, 1, 0, 0, 0, 0, release.form.dust(1.0f));
+                        }
+                    }
+                    if (tick % 12 == 0) {
+                        world.spawnParticle(Particle.END_ROD, base.clone().add(0, 1.2, 0)
+                                .add(right.clone().multiply(side * 1.9 * flap)), 1, 0, 0, 0, 0);
+                    }
+                }
+            }
+            case SOUL_REAPER -> {
+                // Black-and-colour reiatsu rising off the body like flame.
+                ThreadLocalRandom random = ThreadLocalRandom.current();
+                for (int i = 0; i < 3; i++) {
+                    double a = random.nextDouble(Math.PI * 2);
+                    Location point = base.clone().add(Math.cos(a) * 0.5, random.nextDouble(0, 2.0), Math.sin(a) * 0.5);
+                    world.spawnParticle(Particle.DUST, point, 1, 0, 0.1, 0, 0,
+                            Vfx.dust(i == 0 ? release.form.color() : Color.fromRGB(20, 20, 25), 1.3f));
+                }
+                if (tick % 10 == 0) {
+                    world.spawnParticle(Particle.ELECTRIC_SPARK, base.clone().add(0, 1, 0), 4, 0.4, 0.6, 0.4, 0.03);
+                }
+            }
+            case HOLLOW -> {
+                if (tick % 4 == 0) {
+                    // Bone horns above the mask.
+                    Color bone = Color.fromRGB(235, 228, 205);
+                    Location head = base.clone().add(0, 1.85, 0);
+                    for (int side = -1; side <= 1; side += 2) {
+                        Vfx.line(head.clone().add(right.clone().multiply(side * 0.18)),
+                                head.clone().add(right.clone().multiply(side * 0.38)).add(forward.clone().multiply(0.15))
+                                        .add(0, 0.5, 0), bone, 0.6f, 0.1);
+                    }
+                }
+                if (tick % 10 == 0) {
+                    Vfx.ring(base.clone().add(0, 0.1, 0), 1.0, 10, Particle.SOUL);
+                    world.spawnParticle(Particle.LARGE_SMOKE, base.clone().add(0, 0.3, 0), 2, 0.4, 0.1, 0.4, 0.01);
+                }
+            }
+            case FULLBRINGER -> {
+                // Four armour plates in the form's colour orbiting the body.
+                for (int plate = 0; plate < 4; plate++) {
+                    double a = tick * 0.15 + plate * (Math.PI / 2);
+                    for (double h = -0.5; h <= 0.51; h += 0.5) {
+                        world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 1.1, 1.0 + h, Math.sin(a) * 1.1),
+                                1, 0, 0, 0, 0, release.form.dust(1.1f));
+                    }
+                }
+                if (tick % 10 == 0) {
+                    world.spawnParticle(Particle.ENCHANT, base.clone().add(0, 1.2, 0), 10, 0.5, 0.6, 0.5, 0.5);
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- advanced: ultimates
+
+    /** Fires the advanced form's ultimate, once per release. */
+    void ultimate(Player player) {
+        Release release = active.get(player.getUniqueId());
+        if (release == null || !release.advanced) {
+            return;
+        }
+        String name = ultimateName(release.faction, release.style);
+        if (release.ultimateUsed) {
+            player.sendActionBar(Component.text(name + " is spent for this release. Sneak + F to seal.",
+                    NamedTextColor.GRAY));
+            return;
+        }
+        boolean used = switch (release.style) {
+            case VANGUARD -> cataclysm(player, release);
+            case MIRAGE -> phantomExecution(player, release, name);
+            case MARKSMAN -> starfall(player, release);
+            case WAYFARER -> tempest(player, release);
+            case ARTIFICER -> worldBreaker(player, release);
+            case KEEPER -> sanctum(player, release);
+        };
+        if (!used) {
+            return;
+        }
+        release.ultimateUsed = true;
+        Location loc = player.getLocation();
+        player.showTitle(Title.title(Component.text(name, release.form.text(), TextDecoration.BOLD),
+                Component.text(release.form.name(), NamedTextColor.WHITE),
+                Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(1200), Duration.ofMillis(400))));
+        Component callout = Component.text(player.getName() + ": ", NamedTextColor.GRAY)
+                .append(Component.text("\"" + name + "!\"", release.form.text(), TextDecoration.BOLD));
+        for (Player nearby : loc.getNearbyPlayers(48)) {
+            nearby.sendMessage(callout);
+        }
+        Vfx.sound(loc, Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);
+        loc.getWorld().spawnParticle(Particle.SONIC_BOOM, loc.clone().add(0, 1, 0), 1);
+    }
+
+    /** Two volleys of three giant waves in a fan. */
+    private boolean cataclysm(Player player, Release release) {
+        Vector aim = player.getEyeLocation().getDirection();
+        for (int volley = 0; volley < 2; volley++) {
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (!player.isOnline()) {
+                    return;
+                }
+                waveSound(player.getEyeLocation(), release.theme);
+                for (int fan = -1; fan <= 1; fan++) {
+                    launchWave(player, release, aim.clone().rotateAroundY(Math.toRadians(fan * 22)), 3.0, 9.0);
+                }
+            }, volley * 10L);
+        }
+        return true;
+    }
+
+    /** Blink behind up to five enemies in turn, striking each, then return to where it began. */
+    private boolean phantomExecution(Player player, Release release, String name) {
+        Location home = player.getLocation();
+        java.util.List<LivingEntity> targets = new java.util.ArrayList<>();
+        for (LivingEntity entity : home.getNearbyLivingEntities(12)) {
+            if (service.canStrike(player, entity) && player.hasLineOfSight(entity)) {
+                targets.add(entity);
+            }
+        }
+        if (targets.isEmpty()) {
+            player.sendActionBar(Component.text(name + " needs an enemy in sight within 12 blocks.", NamedTextColor.GRAY));
+            return false;
+        }
+        targets.sort(java.util.Comparator.comparingDouble(e -> e.getLocation().distanceSquared(home)));
+        java.util.List<LivingEntity> marks = targets.subList(0, Math.min(5, targets.size()));
+        afterimage(home.clone().add(0, 1, 0), release);
+        blinkSound(home, release.theme);
+        new BukkitRunnable() {
+            int index;
+
+            @Override
+            public void run() {
+                if (!player.isOnline() || player.isDead()) {
+                    cancel();
+                    return;
+                }
+                if (index >= marks.size()) {
+                    afterimage(player.getLocation().add(0, 1, 0), release);
+                    player.teleport(home);
+                    blinkSound(home, release.theme);
+                    Vfx.burst(home.clone().add(0, 1, 0), release.form.color(), 40, 0.5, 1.6f);
+                    cancel();
+                    return;
+                }
+                LivingEntity target = marks.get(index++);
+                if (!target.isValid() || target.isDead()) {
+                    return;
+                }
+                Vector facing = target.getLocation().getDirection().setY(0);
+                if (facing.lengthSquared() < 0.01) {
+                    facing = new Vector(0, 0, 1);
+                }
+                Location behind = target.getLocation().subtract(facing.normalize().multiply(1.3));
+                Location from = player.getLocation().add(0, 1, 0);
+                if (standable(behind)) {
+                    behind.setDirection(target.getLocation().toVector().subtract(behind.toVector()));
+                    Vfx.line(from, behind.clone().add(0, 1, 0), release.form.color(), 0.8f, 0.6);
+                    afterimage(from, release);
+                    player.teleport(behind);
+                }
+                target.setNoDamageTicks(0);
+                hit(player, target, 7.0, release);
+                target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 0));
+                Location at = target.getLocation().add(0, target.getHeight() * 0.55, 0);
+                Vfx.arc(at, at.toVector().subtract(player.getLocation().toVector()).setY(0), 1.6,
+                        release.form.color(), 1.6f, 0.2);
+                at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 2, 0.3, 0.2, 0.3, 0);
+                Vfx.sound(at, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1.0f, 0.7f + index * 0.1f);
+            }
+        }.runTaskTimer(plugin, 3L, 5L);
+        return true;
+    }
+
+    /** A wide storm of bolts on the aimed area. */
+    private boolean starfall(Player player, Release release) {
+        Location target = aimPoint(player, 30);
+        Vfx.sound(player.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 1.0f, 0.8f);
+        Vfx.shockwave(plugin, target, release.form.color(), 5.5, 10);
+        storm(player, release, target, 5.5, 26, 4.0, 4, 2L);
+        return true;
+    }
+
+    /** A tornado around the caster that drags enemies in a spiral, then hurls them skyward. */
+    private boolean tempest(Player player, Release release) {
+        Vfx.sound(player.getLocation(), Sound.ENTITY_BREEZE_WIND_BURST, 1.0f, 0.5f);
+        Vfx.sound(player.getLocation(), Sound.ITEM_ELYTRA_FLYING, 0.6f, 1.2f);
+        new BukkitRunnable() {
+            int tick;
+
+            @Override
+            public void run() {
+                if (!player.isOnline() || player.isDead()) {
+                    cancel();
+                    return;
+                }
+                Location center = player.getLocation();
+                var world = center.getWorld();
+                for (int k = 0; k < 12; k++) {
+                    double h = k * 0.5;
+                    double r = 0.6 + h * 0.4;
+                    double a = tick * 0.5 + k * 0.7;
+                    Location point = center.clone().add(Math.cos(a) * r, h, Math.sin(a) * r);
+                    world.spawnParticle(Particle.CLOUD, point, 1, 0, 0, 0, 0);
+                    world.spawnParticle(Particle.DUST, point, 1, 0.05, 0.05, 0.05, 0, release.form.dust(1.4f));
+                }
+                if (tick >= 60) {
+                    for (LivingEntity entity : center.getNearbyLivingEntities(8)) {
+                        if (service.canStrike(player, entity)) {
+                            entity.setNoDamageTicks(0);
+                            hit(player, entity, 4.0, release);
+                            entity.setVelocity(new Vector(0, 1.3, 0));
+                        }
+                    }
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 80, 0, false, false, true));
+                    Vfx.sound(center, Sound.ENTITY_BREEZE_WIND_BURST, 1.0f, 0.7f);
+                    Vfx.burst(center.clone().add(0, 2, 0), release.form.color(), 60, 1.5, 1.8f);
+                    cancel();
+                    return;
+                }
+                for (LivingEntity entity : center.getNearbyLivingEntities(8)) {
+                    if (!service.canStrike(player, entity)) {
+                        continue;
+                    }
+                    Vector toCenter = center.toVector().subtract(entity.getLocation().toVector()).setY(0);
+                    if (toCenter.lengthSquared() < 0.01) {
+                        continue;
+                    }
+                    Vector inward = toCenter.clone().normalize();
+                    Vector around = new Vector(-inward.getZ(), 0, inward.getX());
+                    entity.setVelocity(inward.multiply(0.25).add(around.multiply(0.4)).setY(0.08));
+                    if (tick % 10 == 0) {
+                        entity.setNoDamageTicks(0);
+                        hit(player, entity, 2.0, release);
+                    }
+                }
+                if (tick % 10 == 0) {
+                    Vfx.sound(center, Sound.ENTITY_BREEZE_IDLE_AIR, 1.0f, 0.6f);
+                }
+                tick += 2;
+            }
+        }.runTaskTimer(plugin, 0L, 2L);
+        return true;
+    }
+
+    /** Three rings of pillars erupt outward from the caster. */
+    private boolean worldBreaker(Player player, Release release) {
+        Location center = player.getLocation();
+        BlockData block = release.theme.pillar.createBlockData();
+        Set<UUID> hit = new HashSet<>();
+        double[] radii = {2.5, 4.5, 6.5};
+        for (int ring = 0; ring < radii.length; ring++) {
+            double radius = radii[ring];
+            double height = 2.0 + ring * 0.6;
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                if (!player.isOnline()) {
+                    return;
+                }
+                Vfx.sound(center, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, 1.0f, 0.6f);
+                Vfx.sound(center, Sound.BLOCK_POINTED_DRIPSTONE_LAND, 1.0f, 0.5f);
+                int count = (int) (radius * 2.2);
+                for (int i = 0; i < count; i++) {
+                    double a = i * (Math.PI * 2 / count);
+                    Location ground = groundAt(center.clone().add(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+                    if (ground == null) {
+                        continue;
+                    }
+                    raisePillar(ground, block, height);
+                    ground.getWorld().spawnParticle(Particle.BLOCK, ground.clone().add(0, 0.2, 0), 10, 0.4, 0.2, 0.4,
+                            0.1, block);
+                    for (LivingEntity entity : ground.getNearbyLivingEntities(1.7, 2.5)) {
+                        if (hit.add(entity.getUniqueId()) && service.canStrike(player, entity)) {
+                            hit(player, entity, 7.0, release);
+                            entity.setVelocity(outward(center, entity).multiply(0.3).setY(1.0));
+                        }
+                    }
+                }
+                Vfx.ring(center.clone().add(0, 0.2, 0), radius, (int) (radius * 8), release.form.color(), 1.4f);
+            }, ring * 6L);
+        }
+        return true;
+    }
+
+    /** An eight-second zone: allies inside regenerate and resist, enemies are slowed and worn down. */
+    private boolean sanctum(Player player, Release release) {
+        Location center = player.getLocation();
+        Vfx.sound(center, Sound.BLOCK_BELL_USE, 1.0f, 0.8f);
+        Vfx.sound(center, Sound.BLOCK_BEACON_POWER_SELECT, 1.0f, 0.8f);
+        new BukkitRunnable() {
+            int tick;
+
+            @Override
+            public void run() {
+                if (!player.isOnline() || tick > 160) {
+                    cancel();
+                    return;
+                }
+                for (int layer = 0; layer < 4; layer++) {
+                    double h = layer * 1.2;
+                    double r = Math.sqrt(Math.max(0.5, 36 - h * h * 2.2));
+                    Vfx.ring(center.clone().add(0, 0.2 + h, 0), r, (int) (r * 6), release.form.color(), 1.2f);
+                }
+                center.getWorld().spawnParticle(release.theme.accent, center.clone().add(0, 1, 0), 10, 3, 1.5, 3, 0.02);
+                for (Player ally : center.getNearbyPlayers(6)) {
+                    if (ally.equals(player) || (AwakeningService.canPlay(ally) && AwakeningPowers.allies(player, ally))) {
+                        ally.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 30, 1, false, true, true));
+                        ally.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 30, 0, false, true, true));
+                    }
+                }
+                for (LivingEntity entity : center.getNearbyLivingEntities(6)) {
+                    if (service.canStrike(player, entity)) {
+                        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 1));
+                        if (tick % 20 == 0) {
+                            entity.setNoDamageTicks(0);
+                            hit(player, entity, 2.0, release);
+                        }
+                    }
+                }
+                if (tick % 40 == 0) {
+                    Vfx.sound(center, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0f, 0.8f);
+                }
+                tick += 10;
+            }
+        }.runTaskTimer(plugin, 0L, 10L);
         return true;
     }
 

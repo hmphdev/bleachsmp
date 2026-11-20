@@ -73,6 +73,14 @@ awakenings:
     # Sneak + right-click technique.
     secondary-technique-cooldown-seconds: 10
     damage-multiplier: 1.0
+  # Advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) are longer, stronger releases with a
+  # once-per-release ultimate on F. advanced-cooldown-seconds starts when they seal. damage-multiplier above
+  # applies to both tiers; power multiplies advanced technique and ultimate damage on top of it.
+  advanced-release:
+    duration-seconds: 40
+    technique-cooldown-seconds: 5
+    secondary-technique-cooldown-seconds: 8
+    power: 1.4
 
 abilities:
   SOUL_REAPER:

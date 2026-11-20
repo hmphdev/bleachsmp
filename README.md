@@ -47,14 +47,14 @@ Your first form unlocks automatically at 36 evidence **at any rank**. Advanced f
 | Quincy | Schrift | Vollständig |
 | Fullbringer | Awakened Fullbring | Complete Fullbring |
 
-| Style | Example habits | First ability → Advanced ability |
+| Style | Example habits | Advanced-form ultimate |
 | --- | --- | --- |
-| Vanguard | Melee, sprint attacks, boss clears | **Crimson Rush** (lunging slash) → **Heaven-Splitting Charge** (stronger slash, splash damage, and Speed) |
-| Mirage | Ambushes, enchanting, exploration | **Shattered Reflection** (disappear and fool hostile mobs; your next hit blinds) → **Mirror Labyrinth** (longer concealment and Speed) |
-| Marksman | Projectile hits, fishing, boss clears | **Spirit Lance** (fast spirit arrow) → **Astral Volley** (spread of piercing arrows) |
-| Wayfarer | Exploration, fishing, sprint attacks | **Riftstep** (leap and Slow Falling) → **Windwalk** (longer leap, Slow Falling, and Speed) |
-| Artificer | Mining, building, crafting | **Stone Resonance** (Haste and Night Vision) → **Living Forge** (Haste II, Night Vision, and Absorption) |
-| Keeper | Blocking, farming, sharing potions | **Warding Pulse** (Absorption) → **Sanctuary** (Regeneration and Resistance). Both also buff nearby scoreboard teammates. |
+| Vanguard | Melee, sprint attacks, boss clears | Two volleys of three giant waves |
+| Mirage | Ambushes, enchanting, exploration | Strike up to five enemies in turn from behind, then return |
+| Marksman | Projectile hits, fishing, boss clears | A 26-bolt storm over a wide area |
+| Wayfarer | Exploration, fishing, sprint attacks | A three-second tornado that drags enemies in, then hurls them skyward |
+| Artificer | Mining, building, crafting | Three expanding rings of erupting pillars |
+| Keeper | Blocking, farming, sharing potions | An eight-second sanctum: allies regenerate and resist, enemies are slowed and worn down |
 
 ### First-form releases
 
@@ -118,9 +118,38 @@ Pillars are temporary block displays, so they never change the world. `/bleach a
 
 Press **F** again to seal the form early. It also seals on death, logout, or changing worlds. The first-form release cooldown starts once the form seals. Tune the duration, both technique cooldowns, and technique damage under `awakenings.release` in `config.yml`.
 
-Advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) remain single powerful releases, now with a faction-coloured burst, a rising helix, a shockwave, and thunder. The sealed starter abilities also have their own effects: Crescent Cut draws a pale crescent through the target, Cero Rush flashes red and leaves a soul-fire trail, Heilig Pfeil shows a reishi bow and a light trail on the arrow, and Bringer Guard surrounds the player with orbiting gold guard plates.
+### Advanced-form releases
 
-Use `/bleach awakenings` to see your total progress, rank requirements, and unlocked powers. Your next power and its trait stay hidden until you unlock it. Hold your faction starter item and press **F** (swap hands) to release your highest unlocked form. `/bleach release first` and `/bleach release advanced` let you use a specific form instead. Both forms share a release cooldown (40 seconds for first forms, 95 for advanced forms by default). Right-click still uses the original starter ability on its own cooldown. Set the advanced rank requirement and cooldowns in the `awakenings` section of `config.yml`.
+Advanced forms (Soul Reaper **Bankai**, Hollow **Segunda Etapa**, Quincy **Vollständig**, and **Complete Fullbring**) are 40-second releases built the same way as first forms, with more power:
+
+- **A two-second transformation.** A bolt of light (dark for Hollows) strikes the player, then a ten-block pillar of reiatsu rises. A nine-block shockwave and explosion follow. Nearby enemies are thrown back, and enemy players are briefly covered in Darkness. The call-out reaches players within 64 blocks.
+- **A lasting look.** Quincy grow flapping wings of light, Hollows grow bone horns over a ring of souls, Fullbringers are circled by four armour plates, and Soul Reapers give off black-and-colour reiatsu like flame.
+- **Stronger kits.** Techniques deal 40% more damage on shorter cooldowns (5 seconds, 8 for sneak), and the faction passive goes up one level. The advanced form rolls its own variant and secondary technique separately from the first form, so a player's Bankai does not simply mirror their Shikai.
+- **An ultimate on F, once per release**, set by the advanced form's playstyle (see the table above). Sneak + F seals the form early. The action bar shows whether the ultimate is ready.
+
+| Playstyle | Soul Reaper Bankai | Hollow Segunda Etapa | Quincy Vollständig | Complete Fullbring |
+| --- | --- | --- | --- | --- |
+| Vanguard | Akagetsu Tenrō / Homuramaru Gōen | Lobo Carmesí Rey / Tiburón Abisal | Sturmengel / Zornflügel | Crimson Knuckle Overdrive / Rewind Blade Zero |
+| Mirage | Kagerō Mugenkyō / Oboromaru Yumeutsutsu | Espejismo Eterno / Sombra Infinita | Spiegelengel / Trugbild | Mirror Coat Infinite / Shuffle Deck Joker |
+| Marksman | Ryūsei Gingaō / Amagumo Raiu | Halcón Negro Abismal / Escorpión Rey | Sternengel / Sintflut | Bullet Echo Arsenal / Echo Rain Storm |
+| Wayfarer | Hayate Tenkū / Kumokiri Shippū | Tormenta Hueca / Águila Tempestad | Himmelsflügel / Zenitflug | Sky Runner Ascension / Meteor Boots Impact |
+| Artificer | Iwagane Daichiō / Iwaoni Senzan | Coloso Titán / Osario Imperial | Bollwerkengel / Säulenthron | Iron Maker Foundry / Forge Ground Colossus |
+| Keeper | Mamorigami Kekkaiden / Kusarigami Shinbaku | Caparazón Sagrado / Araña Reina | Heiligenschein / Bandengel | Heart Lock Sanctuary / Lifeline Eternal |
+
+| Ultimate | Soul Reaper | Hollow | Quincy | Fullbringer |
+| --- | --- | --- | --- | --- |
+| Vanguard | Heaven-Rending Moon | Desgarro Final | Heiliges Gericht | Final Knuckle |
+| Mirage | Thousand Mirage Execution | Ejecución Fantasma | Phantomhinrichtung | Grand Shuffle |
+| Marksman | Galaxy Fall | Lluvia del Abismo | Sternenflut | Full Clip Storm |
+| Wayfarer | Divine Tempest | Huracán Hueco | Himmelssturm | Stratosphere Drop |
+| Artificer | World Breaker | Fin del Mundo | Weltbrecher | Foundry Quake |
+| Keeper | Sanctum of Light | Santuario Vacío | Lichtdom | Lifeline Sanctuary |
+
+Tune the advanced duration, technique cooldowns, and power under `awakenings.advanced-release` in `config.yml`.
+
+The sealed starter abilities also have their own effects: Crescent Cut draws a pale crescent through the target, Cero Rush flashes red and leaves a soul-fire trail, Heilig Pfeil shows a reishi bow and a light trail on the arrow, and Bringer Guard surrounds the player with orbiting gold guard plates.
+
+Use `/bleach awakenings` to see your total progress, rank requirements, and unlocked powers. Your next power and its trait stay hidden until you unlock it. Hold your faction starter item and press **F** (swap hands) to release your highest unlocked form. `/bleach release first` and `/bleach release advanced` let you use a specific form instead. Both forms share a release cooldown that starts when the form seals (40 seconds for first forms, 95 for advanced forms by default). While no form is released, right-click uses the original starter ability on its own cooldown. Set the advanced rank requirement and cooldowns in the `awakenings` section of `config.yml`.
 
 ## First abilities
 
