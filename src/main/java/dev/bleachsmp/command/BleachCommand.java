@@ -46,6 +46,22 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
             showStatus(player);
             return true;
         }
+        if (args[0].equalsIgnoreCase("awakenings") && args.length == 1) {
+            plugin.awakenings().showProgress(player);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("release")) {
+            if (args.length == 1) {
+                plugin.awakenings().release(player, null);
+            } else if (args.length == 2 && args[1].equalsIgnoreCase("first")) {
+                plugin.awakenings().release(player, false);
+            } else if (args.length == 2 && args[1].equalsIgnoreCase("advanced")) {
+                plugin.awakenings().release(player, true);
+            } else {
+                player.sendMessage(Component.text("Usage: /bleach release [first|advanced]", NamedTextColor.RED));
+            }
+            return true;
+        }
         if (args[0].equalsIgnoreCase("choose")) {
             if (plugin.getFaction(player.getUniqueId()) != null) {
                 player.sendMessage(Component.text("Your faction is already chosen. A switching ritual is not available yet.",
@@ -56,7 +72,7 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        player.sendMessage(Component.text("Usage: /bleach [status|choose|garganta|boss mark <id>|boss unmark]",
+        player.sendMessage(Component.text("Usage: /bleach [status|choose|awakenings|release|garganta|boss]",
                 NamedTextColor.RED));
         return true;
     }
@@ -65,7 +81,10 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
             @NotNull String alias, @NotNull String[] args) {
         if (args.length == 1) {
-            return matching(List.of("status", "choose", "garganta", "boss"), args[0]);
+            return matching(List.of("status", "choose", "awakenings", "release", "garganta", "boss"), args[0]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("release")) {
+            return matching(List.of("first", "advanced"), args[1]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("boss")) {
             return matching(List.of("mark", "unmark"), args[1]);
@@ -90,6 +109,7 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
                 + " to Rank " + (rank - 1) + ")"), NamedTextColor.GRAY));
         player.sendMessage(Component.text("Weekly boss challenge: " + plugin.activeBossChallenge(),
                 NamedTextColor.DARK_AQUA));
+        player.sendMessage(Component.text("Check your playstyle and forms with /bleach awakenings.", NamedTextColor.GRAY));
     }
 
     private void handleBossCommand(CommandSender sender, String[] args) {

@@ -53,6 +53,7 @@ public final class HuecoMundoService implements Listener {
     private final NamespacedKey hollowTypeKey;
     private final Map<UUID, Location> returnLocations = new HashMap<>();
     private final File returnFile;
+    private final HuecoArrivalIntro arrivalIntro;
     private World world;
     private HollowVisuals hollowVisuals;
 
@@ -62,6 +63,7 @@ public final class HuecoMundoService implements Listener {
         recipeKey = new NamespacedKey(plugin, "garganta_recipe");
         hollowTypeKey = new NamespacedKey(plugin, "hollow_type");
         returnFile = new File(plugin.getDataFolder(), "garganta-returns.yml");
+        arrivalIntro = new HuecoArrivalIntro(plugin);
     }
 
     public void initialize() {
@@ -96,6 +98,7 @@ public final class HuecoMundoService implements Listener {
 
         loadReturnLocations();
         registerGargantaRecipe();
+        Bukkit.getPluginManager().registerEvents(arrivalIntro, plugin);
         hollowVisuals = new HollowVisuals(plugin, world, hollowTypeKey);
         Bukkit.getScheduler().runTaskTimer(plugin, this::spawnHollows, 200L, 200L);
     }
@@ -105,6 +108,7 @@ public final class HuecoMundoService implements Listener {
     }
 
     public void shutdown() {
+        arrivalIntro.shutdown();
         if (hollowVisuals != null) {
             hollowVisuals.shutdown();
         }
@@ -121,6 +125,9 @@ public final class HuecoMundoService implements Listener {
     }
 
     public void activateGarganta(Player player) {
+        if (arrivalIntro.isPlaying(player)) {
+            return;
+        }
         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_PORTAL_TRIGGER, 0.8f, 0.7f);
         player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation().add(0, 1, 0), 45,
                 0.45, 0.8, 0.45, 0.5);
@@ -149,6 +156,9 @@ public final class HuecoMundoService implements Listener {
         }
         player.getWorld().playSound(player.getLocation(), Sound.BLOCK_PORTAL_TRAVEL, 0.8f, 0.8f);
         player.sendMessage(Component.text("The Garganta opens into Hueco Mundo.", NamedTextColor.DARK_PURPLE));
+        if (player.getWorld().equals(world) && player.getLocation().distanceSquared(destination) < 1.0) {
+            arrivalIntro.playOnFirstArrival(player);
+        }
     }
 
     @EventHandler
@@ -227,7 +237,7 @@ public final class HuecoMundoService implements Listener {
             if (total >= maxTotal) {
                 break;
             }
-            if (countTaggedHollows(world, player.getLocation(), 48) >= maxNearby) {
+            if (arrivalIntro.isPlaying(player) || countTaggedHollows(world, player.getLocation(), 48) >= maxNearby) {
                 continue;
             }
             String type = rollHollowType();

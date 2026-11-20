@@ -29,6 +29,8 @@ public final class StarterItems {
                 Component.text("Path: " + faction.displayName(), faction.color())
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Right-click to use your faction ability", NamedTextColor.GOLD)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Swap hands to release an unlocked awakening", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)));
         meta.setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);

@@ -57,11 +57,19 @@ progression:
 
 hueco-mundo:
   world-name: HuecoMundo
+  # Show the Severed Gate cinematic once per player on Garganta arrival.
+  arrival-cutscene: true
   hollows:
     max-loaded: 24
     max-near-player: 4
     adjuchas-weight: 22
     vasto-lorde-weight: 4
+
+awakenings:
+  # Shikai and equivalent first forms never require rank. Lower rank numbers are stronger.
+  advanced-unlock-rank: 2
+  first-cooldown-seconds: 40
+  advanced-cooldown-seconds: 95
 
 abilities:
   SOUL_REAPER:

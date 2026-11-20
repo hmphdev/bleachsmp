@@ -1,6 +1,8 @@
 package dev.bleachsmp;
 
 import dev.bleachsmp.ability.AbilityListener;
+import dev.bleachsmp.awakening.AwakeningService;
+import dev.bleachsmp.awakening.PlaystyleListener;
 import dev.bleachsmp.command.BleachCommand;
 import dev.bleachsmp.faction.Faction;
 import dev.bleachsmp.faction.FactionMenu;
@@ -45,6 +47,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
     private StarterItems starterItems;
     private FactionMenu factionMenu;
     private HuecoMundoService huecoMundo;
+    private AwakeningService awakenings;
 
     @Override
     public void onEnable() {
@@ -61,6 +64,8 @@ public final class BleachSmpPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(factionMenu, this);
         getServer().getPluginManager().registerEvents(new ProgressionListener(this), this);
         getServer().getPluginManager().registerEvents(new AbilityListener(this), this);
+        awakenings = new AwakeningService(this);
+        getServer().getPluginManager().registerEvents(new PlaystyleListener(awakenings), this);
         huecoMundo = new HuecoMundoService(this);
         getServer().getPluginManager().registerEvents(huecoMundo, this);
         huecoMundo.initialize();
@@ -85,6 +90,10 @@ public final class BleachSmpPlugin extends JavaPlugin {
 
     public HuecoMundoService huecoMundo() {
         return huecoMundo;
+    }
+
+    public AwakeningService awakenings() {
+        return awakenings;
     }
 
     public Faction getFaction(UUID playerId) {
@@ -242,6 +251,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
         }
         pvpKillTimes.put(pairKey, now);
         awardPoints(killer, points, "player kill");
+        awakenings.checkUnlock(killer);
         return true;
     }
 
@@ -269,6 +279,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
             awardPoints(player, challengePoints, "weekly boss challenge");
             player.sendMessage(Component.text("Weekly boss challenge complete: " + bossId, NamedTextColor.GOLD));
         }
+        awakenings.recordBossReward(player, firstClear, claimedChallenge);
         savePlayerData();
         return true;
     }

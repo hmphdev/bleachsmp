@@ -7,8 +7,8 @@ api-version: '1.21.11'
 
 commands:
   bleach:
-    description: View your path, faction choice, ranks, or boss tools.
-    usage: /bleach [status|choose|garganta|boss mark <id>]
+    description: View your faction, rank, and awakenings, or release an awakened form.
+    usage: /bleach [status|choose|awakenings|release|garganta|boss]
     aliases: [bleachsmp]
 
 permissions:
