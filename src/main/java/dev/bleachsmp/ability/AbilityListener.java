@@ -61,11 +61,11 @@ public final class AbilityListener implements Listener {
         }
 
         // A released first form (Shikai, Resurrección, Schrift, Fullbring) replaces the sealed ability
-        // with its technique, at any rank.
+        // with its techniques, at any rank: right-click for the main one, sneak + right-click for the second.
         var releases = plugin.awakenings().releases();
         if (releases.isActive(player)) {
             event.setCancelled(true);
-            releases.useTechnique(player);
+            releases.useTechnique(player, player.isSneaking());
             return;
         }
 

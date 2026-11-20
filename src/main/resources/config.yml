@@ -70,6 +70,8 @@ awakenings:
   release:
     duration-seconds: 30
     technique-cooldown-seconds: 6
+    # Sneak + right-click technique.
+    secondary-technique-cooldown-seconds: 10
     damage-multiplier: 1.0
 
 abilities:

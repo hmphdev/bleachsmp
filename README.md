@@ -67,18 +67,56 @@ Every faction's first form is a 30-second release rather than a single move: Sou
 | Quincy | Descending halo and pillars of light | Jump Boost II | Mark the target with Glowing |
 | Fullbringer | Enchant glyphs converging on the hand, then a totem burst | Haste I | Weaken the target |
 
-While released, right-clicking the starter item uses the form's technique in place of the sealed ability, at any rank, on a 6-second cooldown. Each playstyle has its own technique, styled per faction:
+While released, the starter item has two techniques, both usable at any rank: **right-click** for the main technique (6-second cooldown) and **sneak + right-click** for the secondary one (10-second cooldown). The action bar shows both and their cooldowns.
 
-| Style | Technique | Soul Reaper | Hollow | Quincy | Fullbringer |
-| --- | --- | --- | --- | --- | --- |
-| Vanguard | A cutting wave that tears forward | "Howl, Akagetsu!" — Crimson Fang | "Desgarra, Lobo Carmesí!" — Garra Roja (triple claw) | "Schrift A — The Assault!" — Heiliger Sturm | "Fullbring: Crimson Knuckle!" — Knuckle Breaker |
-| Mirage | Blink behind a target up to 12 blocks away and strike, blinding it | "Deceive, Kagerō!" — Haze Step | "Engaña, Espejismo!" — Sonido Fantasma | "Schrift I — The Illusion!" — Schattenschritt | "Fullbring: Mirror Coat!" — Reflection Swap |
-| Marksman | A long-range blast that bursts on impact | "Pierce, Ryūsei!" — Falling Star | "Dispara, Halcón Negro!" — Cero Oscuro (wider, faster) | "Schrift S — The Starshot!" — Sternregen | "Fullbring: Bullet Echo!" — Echo Shot |
-| Wayfarer | Dash forward, cutting every enemy you pass | "Soar, Hayate!" — Gale Passage | "Corre, Viento Hueco!" — Embestida | "Schrift F — The Flight!" — Lichtsprung | "Fullbring: Sky Runner!" — Ground Skip |
-| Artificer | Slam the ground and hurl nearby enemies skyward | "Crush, Iwagane!" — Mountain Breaker | "Aplasta, Coloso!" — Terremoto | "Schrift B — The Bulwark!" — Erdbrecher | "Fullbring: Iron Maker!" — Forge Quake |
-| Keeper | Heal and shield you and teammates, driving enemies back | "Shelter, Mamorigami!" — Shrine Ward | "Protege, Caparazón!" — Coraza Viva | "Schrift H — The Haven!" — Lichtschild | "Fullbring: Heart Lock!" — Locket Ward |
+Kits are built so players rarely match:
 
-Press **F** again to seal the form early. It also seals on death, logout, or changing worlds. The first-form release cooldown starts once the form seals. Tune the duration, technique cooldown, and technique damage under `awakenings.release` in `config.yml`.
+- **Two forms per playstyle.** Each playstyle has two form variants with different names, call-outs, colours, and main techniques. Which one a player gets comes from their UUID, so it never changes for them and players split evenly between the two.
+- **A secondary technique from the secondary playstyle.** Players with a strong secondary habit get that playstyle's technique on sneak + right-click. Players without one get a stable pick from every other technique.
+- **Twelve techniques, styled per faction.** Each faction gives every technique its own name, colours, particles, sounds, and on-hit effect.
+
+That is more than a hundred kits per faction. In a simulation of 30 players with melee-heavy habits, about one pair shared an identical kit on average.
+
+| Playstyle | Form A main technique | Form B main technique |
+| --- | --- | --- |
+| Vanguard | **Wave**: a cutting wave that tears through its path | **Flurry**: lunge at a target and land a five-hit combo |
+| Mirage | **Blink**: strike from behind a target up to 12 blocks away, blinding it | **Scatter**: blind enemies, turn invisible, and hop around as afterimages |
+| Marksman | **Beam**: a long-range blast that bursts on impact | **Rain**: call ten bolts down on the area you aim at |
+| Wayfarer | **Dash**: cut every enemy you pass | **Skyfall**: leap high, then crash down in a shockwave (no fall damage) |
+| Artificer | **Slam**: hurl nearby enemies skyward | **Pillars**: a line of erupting pillars that launch enemies |
+| Keeper | **Ward**: heal and shield teammates, push enemies back | **Chains**: bind enemies in sight, drag them in, and root them |
+
+Form names and call-outs by faction (Form A / Form B):
+
+| Playstyle | Soul Reaper | Hollow | Quincy | Fullbringer |
+| --- | --- | --- | --- | --- |
+| Vanguard | Akagetsu / Homuramaru | Lobo Carmesí / Tiburón | The Assault / The Rampage | Crimson Knuckle / Rewind Blade |
+| Mirage | Kagerō / Oboromaru | Espejismo / Sombra Pálida | The Illusion / The Mirror | Mirror Coat / Shuffle Deck |
+| Marksman | Ryūsei / Amagumo | Halcón Negro / Escorpión | The Starshot / The Deluge | Bullet Echo / Echo Rain |
+| Wayfarer | Hayate / Kumokiri | Viento Hueco / Águila Hueca | The Flight / The Zenith | Sky Runner / Meteor Boots |
+| Artificer | Iwagane / Iwaoni | Coloso / Osario | The Bulwark / The Pillar | Iron Maker / Forge Ground |
+| Keeper | Mamorigami / Kusarigami | Caparazón / Araña Blanca | The Haven / The Tether | Heart Lock / Lifeline |
+
+Technique names by faction:
+
+| Technique | Soul Reaper | Hollow | Quincy | Fullbringer |
+| --- | --- | --- | --- | --- |
+| Wave | Crimson Fang | Garra Roja (triple claw) | Heiliger Sturm | Knuckle Breaker |
+| Blink | Haze Step | Sonido Fantasma | Schattenschritt | Reflection Swap |
+| Beam | Falling Star | Cero Oscuro (wider, faster) | Sternregen | Echo Shot |
+| Dash | Gale Passage | Embestida | Lichtsprung | Ground Skip |
+| Slam | Mountain Breaker | Terremoto | Erdbrecher | Forge Quake |
+| Ward | Shrine Ward | Coraza Viva | Lichtschild | Locket Ward |
+| Flurry | Hundred Moon Flurry | Frenesí | Klingenwirbel | Rapid Rewind |
+| Scatter | Mirror Haze | Eco Vacío | Spiegelbruch | Shuffle Step |
+| Rain | Heaven's Rain | Lluvia de Cero | Pfeilregen | Echo Barrage |
+| Skyfall | Falling Moon | Caída del Rey | Sternenfall | Meteor Drop |
+| Pillars | Stone Fangs (calcite) | Colmillos de Hueso (bone) | Lichtsäulen (glass) | Forge Spikes (iron) |
+| Chains | Binding Thread | Cadenas del Hambre | Bindungsfaden | Tether Line |
+
+Pillars are temporary block displays, so they never change the world. `/bleach awakenings` shows each player's own form, call-out, and both techniques.
+
+Press **F** again to seal the form early. It also seals on death, logout, or changing worlds. The first-form release cooldown starts once the form seals. Tune the duration, both technique cooldowns, and technique damage under `awakenings.release` in `config.yml`.
 
 Advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) remain single powerful releases, now with a faction-coloured burst, a rising helix, a shockwave, and thunder. The sealed starter abilities also have their own effects: Crescent Cut draws a pale crescent through the target, Cero Rush flashes red and leaves a soul-fire trail, Heilig Pfeil shows a reishi bow and a light trail on the arrow, and Bringer Guard surrounds the player with orbiting gold guard plates.
 

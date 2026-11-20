@@ -145,7 +145,7 @@ public final class AwakeningService {
         }
         data.remove(evidenceKey);
         player.sendMessage(Component.text("Awakening unlocked: " + formName(faction(player), advanced) + " — "
-                + powerName(faction(player), style, advanced) + "!", NamedTextColor.GOLD));
+                + powerName(player, faction(player), style, advanced) + "!", NamedTextColor.GOLD));
         player.sendMessage(Component.text("Hold your faction starter item and press swap hands (F) to release it.",
                 NamedTextColor.YELLOW));
     }
@@ -178,7 +178,7 @@ public final class AwakeningService {
     private void showForm(Player player, Faction faction, Playstyle style, boolean advanced) {
         Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
         player.sendMessage(Component.text(formName(faction, advanced) + ": " + (style == null ? "Locked"
-                : powerName(faction, style, advanced) + " — " + powerDescription(faction, style, advanced)
+                : powerName(player, faction, style, advanced) + " — " + powerDescription(player, faction, style, trait, advanced)
                         + (trait == null ? "" : " Trait: " + AwakeningPowers.traitName(trait) + ".")),
                 style == null ? NamedTextColor.GRAY : faction.color()));
     }
@@ -218,7 +218,7 @@ public final class AwakeningService {
         }
         Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
         if (!advanced) {
-            releases.release(player, faction, style);
+            releases.release(player, faction, style, trait);
             if (trait != null) {
                 AwakeningPowers.applyTrait(player, trait);
             }
@@ -234,7 +234,7 @@ public final class AwakeningService {
             AwakeningPowers.applyTrait(player, trait);
         }
         data.set(releaseReadyKey, PersistentDataType.LONG, now + releaseCooldown(advanced) * 1000L);
-        player.sendMessage(Component.text(formName(faction, advanced) + " — " + powerName(faction, style, advanced) + "!",
+        player.sendMessage(Component.text(formName(faction, advanced) + " — " + powerName(player, faction, style, advanced) + "!",
                 faction.color()));
     }
 
@@ -243,12 +243,15 @@ public final class AwakeningService {
                 + (advanced ? "advanced" : "first") + "-cooldown-seconds", advanced ? 95 : 40), 0, 3600);
     }
 
-    private static String powerName(Faction faction, Playstyle style, boolean advanced) {
-        return !advanced ? ReleaseService.form(faction, style).name() : AwakeningPowers.name(style, advanced);
+    private static String powerName(Player player, Faction faction, Playstyle style, boolean advanced) {
+        return !advanced ? ReleaseService.form(player.getUniqueId(), faction, style).name()
+                : AwakeningPowers.name(style, advanced);
     }
 
-    private static String powerDescription(Faction faction, Playstyle style, boolean advanced) {
-        return !advanced ? ReleaseService.description(faction, style) : AwakeningPowers.description(style, advanced);
+    private static String powerDescription(Player player, Faction faction, Playstyle style, Playstyle trait,
+            boolean advanced) {
+        return !advanced ? ReleaseService.description(player.getUniqueId(), faction, style, trait)
+                : AwakeningPowers.description(style, advanced);
     }
 
     boolean holdsStarter(Player player) {
