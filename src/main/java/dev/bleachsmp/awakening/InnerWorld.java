@@ -191,12 +191,14 @@ final class InnerWorld implements Listener {
                         completed.accept(false);
                         return;
                     }
+                    tickets(arena, true);
                     if (built.add(arena)) {
                         buildArena(arena, faction);
                     }
                     boolean entered = openTrial(player, kit, faction, arena);
                     if (!entered) {
                         occupied.remove(arena);
+                        tickets(arena, false);
                     }
                     completed.accept(entered);
                 });
@@ -237,6 +239,20 @@ final class InnerWorld implements Listener {
                 Component.empty(), Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1300), Duration.ofMillis(300))));
         fight.start(20 * 60 * bankai.setting("trial-minutes", 5, 1, 60));
         return true;
+    }
+
+    /** Keeps an arena's chunks loaded and entity-ticking while a trial uses it, so the spirit can't unload. */
+    private void tickets(int slot, boolean add) {
+        int x = arenaX(slot);
+        for (int cx = (x - RADIUS) >> 4; cx <= (x + RADIUS) >> 4; cx++) {
+            for (int cz = -RADIUS >> 4; cz <= RADIUS >> 4; cz++) {
+                if (add) {
+                    world.addPluginChunkTicket(cx, cz, plugin);
+                } else {
+                    world.removePluginChunkTicket(cx, cz, plugin);
+                }
+            }
+        }
     }
 
     private static int arenaX(int slot) {
@@ -346,6 +362,13 @@ final class InnerWorld implements Listener {
     }
 
     void lose(Player player) {
+        lose(player, "forfeit");
+    }
+
+    void lose(Player player, String reason) {
+        if (trials.containsKey(player.getUniqueId())) {
+            plugin.getLogger().info("Bankai trial for " + player.getName() + " lost: " + reason + ".");
+        }
         finish(player, true, true);
     }
 
@@ -370,6 +393,7 @@ final class InnerWorld implements Listener {
         spirits.remove(trial.fight().spiritId());
         trial.fight().close();
         occupied.remove(trial.slot());
+        tickets(trial.slot(), false);
         awakenings.releases().seal(player, false);
         if (loss) {
             bankai.loseTrial(player);

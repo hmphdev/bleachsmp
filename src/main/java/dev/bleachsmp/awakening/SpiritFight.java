@@ -30,6 +30,7 @@ import org.bukkit.util.Vector;
 final class SpiritFight {
     private static final int WARNING_TICKS = 15;
     private static final int ENDING_TICKS = 60;
+    private static final int GRACE_TICKS = 40;
 
     private record Cast(Mechanic move, Location origin, Location target, Vector direction, int resolveAt) {
         Location along(double distance) {
@@ -50,6 +51,7 @@ final class SpiritFight {
     private BukkitTask task;
     private int tick, limit, nextCast, secondLineAt = -1, endingAt = -1, lossAt = -1;
     private boolean second, half, quarter;
+    private int unstable;
     private Cast cast;
     private String followup;
 
@@ -147,9 +149,28 @@ final class SpiritFight {
 
     private void tick() {
         tick++;
-        if ((lossAt >= 0 && tick >= lossAt) || !arena.inArena(owner) || !spirit.isValid()) {
-            arena.lose(owner);
+        if (lossAt >= 0 && tick >= lossAt) {
+            arena.lose(owner, "defeated");
             return;
+        }
+        if (spirit.isDead()) {
+            // Killed outside the normal damage path (e.g. /kill): never a free win, never a stranding.
+            arena.lose(owner, "spirit removed");
+            return;
+        }
+        // Right after the cross-world teleport the arena chunks may not be entity-ticking yet, so the player's
+        // position and the spirit's validity can briefly read wrong. Only end the trial if it persists.
+        if (!arena.inArena(owner) || !spirit.isValid()) {
+            unstable++;
+            if (tick > GRACE_TICKS && unstable >= 20) {
+                arena.lose(owner, !spirit.isValid() ? "spirit not valid (chunk unloaded?)" : "left the arena");
+                return;
+            }
+            if (!spirit.isValid()) {
+                return;
+            }
+        } else {
+            unstable = 0;
         }
         if (tick == secondLineAt) {
             subtitle(owner, followup);
@@ -162,7 +183,7 @@ final class SpiritFight {
             return;
         }
         if (tick >= limit) {
-            arena.lose(owner);
+            arena.lose(owner, "time limit");
             return;
         }
         if (spirit.getTarget() != owner) {
