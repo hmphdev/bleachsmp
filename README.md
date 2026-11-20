@@ -56,6 +56,23 @@ Your first form unlocks automatically at 36 evidence **at any rank**. Advanced f
 | Artificer | Mining, building, crafting | **Stone Resonance** (Haste and Night Vision) → **Living Forge** (Haste II, Night Vision, and Absorption) |
 | Keeper | Blocking, farming, sharing potions | **Warding Pulse** (Absorption) → **Sanctuary** (Regeneration and Resistance). Both also buff nearby scoreboard teammates. |
 
+### Soul Reaper Shikai
+
+A Soul Reaper's first form is a true Shikai: a 30-second release instead of a single move. The playstyle that unlocked it decides which zanpakutō awakens. Releasing it calls out the zanpakutō's command to nearby players, shows its name on screen, and bursts spiritual pressure that pushes nearby enemies back. A countdown boss bar and a coloured reiatsu aura stay up while it is released, and the player gains Speed I.
+
+While Shikai is released, right-clicking the starter item uses the zanpakutō's technique in place of Crescent Cut, at any rank, on a 6-second cooldown:
+
+| Style | Release command | Technique |
+| --- | --- | --- |
+| Vanguard | "Howl, Akagetsu!" | **Crimson Fang**: a crescent wave of red reiatsu that tears through everything in its path |
+| Mirage | "Deceive, Kagerō!" | **Haze Step**: vanish and strike from behind a target up to 12 blocks away, blinding it |
+| Marksman | "Pierce, Ryūsei!" | **Falling Star**: a long-range blade of light that bursts on impact |
+| Wayfarer | "Soar, Hayate!" | **Gale Passage**: dash forward on a gale, cutting every enemy you pass |
+| Artificer | "Crush, Iwagane!" | **Mountain Breaker**: slam the ground and hurl nearby enemies skyward |
+| Keeper | "Shelter, Mamorigami!" | **Shrine Ward**: heal and shield yourself and teammates while driving enemies back |
+
+Press **F** again to seal the Shikai early. It also seals on death, logout, or changing worlds. The first-form release cooldown starts once the Shikai seals. Tune the duration, technique cooldown, and technique damage under `awakenings.shikai` in `config.yml`.
+
 Use `/bleach awakenings` to see your total progress, rank requirements, and unlocked powers. Your next power and its trait stay hidden until you unlock it. Hold your faction starter item and press **F** (swap hands) to release your highest unlocked form. `/bleach release first` and `/bleach release advanced` let you use a specific form instead. Both forms share a release cooldown (40 seconds for first forms, 95 for advanced forms by default). Right-click still uses the original starter ability on its own cooldown. Set the advanced rank requirement and cooldowns in the `awakenings` section of `config.yml`.
 
 ## First abilities

@@ -52,6 +52,14 @@ public final class AbilityListener implements Listener {
             return;
         }
 
+        // A released Shikai replaces the sealed ability with its zanpakutō technique, at any rank.
+        var shikai = plugin.awakenings().shikai();
+        if (shikai.isActive(player)) {
+            event.setCancelled(true);
+            shikai.useTechnique(player);
+            return;
+        }
+
         int requiredRank = Math.max(1, plugin.getConfig().getInt("abilities." + faction.name() + ".unlock-rank", 4));
         int currentRank = plugin.getRank(player.getUniqueId());
         if (currentRank > requiredRank) {

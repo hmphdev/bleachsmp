@@ -172,7 +172,7 @@ final class AwakeningPowers {
         }
     }
 
-    private boolean canStrike(Player caster, LivingEntity target) {
+    boolean canStrike(Player caster, LivingEntity target) {
         if (target instanceof Player other) {
             return !caster.equals(other) && caster.getWorld().getPVP() && !allies(caster, other)
                     && AwakeningService.canPlay(other);
@@ -180,7 +180,7 @@ final class AwakeningPowers {
         return service.isHostile(target);
     }
 
-    private static boolean allies(Player first, Player second) {
+    static boolean allies(Player first, Player second) {
         var team = first.getScoreboard().getEntryTeam(first.getName());
         return team != null && team.hasEntry(second.getName());
     }

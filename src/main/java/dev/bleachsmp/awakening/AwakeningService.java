@@ -22,6 +22,7 @@ import org.bukkit.potion.PotionEffectType;
 public final class AwakeningService {
     private final BleachSmpPlugin plugin;
     private final AwakeningPowers powers;
+    private final ShikaiService shikai;
     private final NamespacedKey firstKey;
     private final NamespacedKey advancedKey;
     private final NamespacedKey firstTraitKey;
@@ -35,6 +36,7 @@ public final class AwakeningService {
     public AwakeningService(BleachSmpPlugin plugin) {
         this.plugin = plugin;
         powers = new AwakeningPowers(this);
+        shikai = new ShikaiService(plugin, this);
         firstKey = new NamespacedKey(plugin, "first_awakening");
         advancedKey = new NamespacedKey(plugin, "advanced_awakening");
         firstTraitKey = new NamespacedKey(plugin, "first_awakening_trait");
@@ -46,6 +48,14 @@ public final class AwakeningService {
         for (Habit habit : Habit.values()) {
             habitKeys[habit.ordinal()] = new NamespacedKey(plugin, "awakening_habit_" + habit.name().toLowerCase(Locale.ROOT));
         }
+    }
+
+    public ShikaiService shikai() {
+        return shikai;
+    }
+
+    boolean canStrike(Player caster, LivingEntity target) {
+        return powers.canStrike(caster, target);
     }
 
     boolean canProgress(Player player) {
@@ -135,7 +145,7 @@ public final class AwakeningService {
         }
         data.remove(evidenceKey);
         player.sendMessage(Component.text("Awakening unlocked: " + formName(faction(player), advanced) + " — "
-                + AwakeningPowers.name(style, advanced) + "!", NamedTextColor.GOLD));
+                + powerName(faction(player), style, advanced) + "!", NamedTextColor.GOLD));
         player.sendMessage(Component.text("Hold your faction starter item and press swap hands (F) to release it.",
                 NamedTextColor.YELLOW));
     }
@@ -168,7 +178,7 @@ public final class AwakeningService {
     private void showForm(Player player, Faction faction, Playstyle style, boolean advanced) {
         Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
         player.sendMessage(Component.text(formName(faction, advanced) + ": " + (style == null ? "Locked"
-                : AwakeningPowers.name(style, advanced) + " — " + AwakeningPowers.description(style, advanced)
+                : powerName(faction, style, advanced) + " — " + powerDescription(faction, style, advanced)
                         + (trait == null ? "" : " Trait: " + AwakeningPowers.traitName(trait) + ".")),
                 style == null ? NamedTextColor.GRAY : faction.color()));
     }
@@ -178,6 +188,12 @@ public final class AwakeningService {
         if (faction == null || !holdsStarter(player) || !canPlay(player)) {
             player.sendMessage(Component.text("Hold your own faction starter item in Survival or Adventure to release a form.",
                     NamedTextColor.YELLOW));
+            return;
+        }
+        if (shikai.seal(player, true)) {
+            // Pressing release again while Shikai is out seals it early; the release cooldown starts now.
+            player.getPersistentDataContainer().set(releaseReadyKey, PersistentDataType.LONG,
+                    System.currentTimeMillis() + releaseCooldown(false) * 1000L);
             return;
         }
         boolean advanced = advancedRequested == null ? unlocked(player, true) != null : advancedRequested;
@@ -200,18 +216,41 @@ public final class AwakeningService {
                     NamedTextColor.YELLOW));
             return;
         }
+        Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
+        if (faction == Faction.SOUL_REAPER && !advanced) {
+            shikai.release(player, style);
+            if (trait != null) {
+                AwakeningPowers.applyTrait(player, trait);
+            }
+            // The release cooldown starts once the Shikai would end on its own.
+            data.set(releaseReadyKey, PersistentDataType.LONG,
+                    now + (shikai.durationSeconds() + releaseCooldown(false)) * 1000L);
+            return;
+        }
         if (!powers.cast(player, style, advanced)) {
             return;
         }
-        Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
         if (trait != null) {
             AwakeningPowers.applyTrait(player, trait);
         }
-        int cooldown = Math.clamp(plugin.getConfig().getInt("awakenings."
-                + (advanced ? "advanced" : "first") + "-cooldown-seconds", advanced ? 95 : 40), 0, 3600);
-        data.set(releaseReadyKey, PersistentDataType.LONG, now + cooldown * 1000L);
-        player.sendMessage(Component.text(formName(faction, advanced) + " — " + AwakeningPowers.name(style, advanced) + "!",
+        data.set(releaseReadyKey, PersistentDataType.LONG, now + releaseCooldown(advanced) * 1000L);
+        player.sendMessage(Component.text(formName(faction, advanced) + " — " + powerName(faction, style, advanced) + "!",
                 faction.color()));
+    }
+
+    private int releaseCooldown(boolean advanced) {
+        return Math.clamp(plugin.getConfig().getInt("awakenings."
+                + (advanced ? "advanced" : "first") + "-cooldown-seconds", advanced ? 95 : 40), 0, 3600);
+    }
+
+    private static String powerName(Faction faction, Playstyle style, boolean advanced) {
+        return faction == Faction.SOUL_REAPER && !advanced
+                ? ShikaiService.bladeName(style) : AwakeningPowers.name(style, advanced);
+    }
+
+    private static String powerDescription(Faction faction, Playstyle style, boolean advanced) {
+        return faction == Faction.SOUL_REAPER && !advanced
+                ? ShikaiService.description(style) : AwakeningPowers.description(style, advanced);
     }
 
     boolean holdsStarter(Player player) {
