@@ -193,14 +193,13 @@ public final class BleachSmpPlugin extends JavaPlugin {
             return;
         }
         int rank = getRank(player.getUniqueId());
-        double maxHealth = getConfig().getDouble("progression.ranks." + rank + ".max-health", 20.0);
+        // Ranks no longer grant extra hearts. Reset any bonus health granted by earlier versions.
         var attribute = player.getAttribute(Attribute.MAX_HEALTH);
-        if (attribute == null) {
-            return;
-        }
-        attribute.setBaseValue(Math.max(1.0, maxHealth));
-        if (player.getHealth() > attribute.getValue()) {
-            player.setHealth(attribute.getValue());
+        if (attribute != null && attribute.getBaseValue() != attribute.getDefaultValue()) {
+            attribute.setBaseValue(attribute.getDefaultValue());
+            if (player.getHealth() > attribute.getValue()) {
+                player.setHealth(attribute.getValue());
+            }
         }
         if (rank == 1) {
             var strength = player.getPotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH);

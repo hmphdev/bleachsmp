@@ -15,7 +15,6 @@ progression:
   ranks:
     5:
       points: 0
-      max-health: 20.0
       titles:
         SOUL_REAPER: Unseated
         HOLLOW: Hollow
@@ -23,7 +22,6 @@ progression:
         FULLBRINGER: Fullbringer
     4:
       points: 3
-      max-health: 22.0
       titles:
         SOUL_REAPER: Seated Officer
         HOLLOW: Menos
@@ -31,7 +29,6 @@ progression:
         FULLBRINGER: Awakened Fullbringer
     3:
       points: 8
-      max-health: 26.0
       titles:
         SOUL_REAPER: Lieutenant
         HOLLOW: Adjuchas
@@ -39,7 +36,6 @@ progression:
         FULLBRINGER: Xcution Member
     2:
       points: 15
-      max-health: 32.0
       titles:
         SOUL_REAPER: Captain
         HOLLOW: Espada
@@ -47,7 +43,6 @@ progression:
         FULLBRINGER: Xcution Elite
     1:
       points: 25
-      max-health: 40.0
       titles:
         SOUL_REAPER: Captain-Commander
         HOLLOW: Primera Espada
