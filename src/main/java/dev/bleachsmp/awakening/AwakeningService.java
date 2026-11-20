@@ -214,6 +214,14 @@ public final class AwakeningService {
                 NamedTextColor.GOLD));
     }
 
+    /**
+     * Called every time a release technique, signature or ultimate damages something. Hook for Bankai mastery
+     * (see docs/handoff/bankai-awakening.md): count hits on real rival players while a first form is out.
+     */
+    void techniqueHit(Player caster, LivingEntity target, boolean advanced) {
+        // Intentionally empty until the Bankai awakening is built.
+    }
+
     public void showProgress(Player player) {
         Faction faction = faction(player);
         if (faction == null) {

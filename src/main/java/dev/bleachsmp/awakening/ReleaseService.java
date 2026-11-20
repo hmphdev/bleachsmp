@@ -775,6 +775,7 @@ public final class ReleaseService implements Listener {
         Vfx.burst(at, release.form.color(), 8, 0.3, 1.2f);
         release.element.burst(at, release.advanced ? 1.4 : 1.0);
         release.element.onHit(caster, target);
+        service.techniqueHit(caster, target, release.advanced);
         long now = System.currentTimeMillis();
         if (now >= release.nextImpactSoundAt) {
             release.nextImpactSoundAt = now + 120;
