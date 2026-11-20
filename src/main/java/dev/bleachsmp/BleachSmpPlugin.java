@@ -66,6 +66,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new AbilityListener(this), this);
         awakenings = new AwakeningService(this);
         getServer().getPluginManager().registerEvents(new PlaystyleListener(awakenings), this);
+        getServer().getPluginManager().registerEvents(awakenings.releases(), this);
         huecoMundo = new HuecoMundoService(this);
         getServer().getPluginManager().registerEvents(huecoMundo, this);
         huecoMundo.initialize();
@@ -82,6 +83,9 @@ public final class BleachSmpPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (awakenings != null) {
+            awakenings.releases().sealAll();
+        }
         savePlayerData();
         if (huecoMundo != null) {
             huecoMundo.shutdown();
@@ -189,14 +193,13 @@ public final class BleachSmpPlugin extends JavaPlugin {
             return;
         }
         int rank = getRank(player.getUniqueId());
-        double maxHealth = getConfig().getDouble("progression.ranks." + rank + ".max-health", 20.0);
+        // Ranks no longer grant extra hearts. Reset any bonus health granted by earlier versions.
         var attribute = player.getAttribute(Attribute.MAX_HEALTH);
-        if (attribute == null) {
-            return;
-        }
-        attribute.setBaseValue(Math.max(1.0, maxHealth));
-        if (player.getHealth() > attribute.getValue()) {
-            player.setHealth(attribute.getValue());
+        if (attribute != null && attribute.getBaseValue() != attribute.getDefaultValue()) {
+            attribute.setBaseValue(attribute.getDefaultValue());
+            if (player.getHealth() > attribute.getValue()) {
+                player.setHealth(attribute.getValue());
+            }
         }
         if (rank == 1) {
             var strength = player.getPotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH);

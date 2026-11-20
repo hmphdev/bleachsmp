@@ -15,7 +15,6 @@ progression:
   ranks:
     5:
       points: 0
-      max-health: 20.0
       titles:
         SOUL_REAPER: Unseated
         HOLLOW: Hollow
@@ -23,7 +22,6 @@ progression:
         FULLBRINGER: Fullbringer
     4:
       points: 3
-      max-health: 22.0
       titles:
         SOUL_REAPER: Seated Officer
         HOLLOW: Menos
@@ -31,7 +29,6 @@ progression:
         FULLBRINGER: Awakened Fullbringer
     3:
       points: 8
-      max-health: 26.0
       titles:
         SOUL_REAPER: Lieutenant
         HOLLOW: Adjuchas
@@ -39,7 +36,6 @@ progression:
         FULLBRINGER: Xcution Member
     2:
       points: 15
-      max-health: 32.0
       titles:
         SOUL_REAPER: Captain
         HOLLOW: Espada
@@ -47,7 +43,6 @@ progression:
         FULLBRINGER: Xcution Elite
     1:
       points: 25
-      max-health: 40.0
       titles:
         SOUL_REAPER: Captain-Commander
         HOLLOW: Primera Espada
@@ -70,6 +65,14 @@ awakenings:
   advanced-unlock-rank: 2
   first-cooldown-seconds: 40
   advanced-cooldown-seconds: 95
+  # First forms (Shikai, Resurrección, Schrift, Awakened Fullbring) are timed releases. While one is out,
+  # the starter item's right-click uses the form's technique. first-cooldown-seconds starts when it seals.
+  release:
+    duration-seconds: 30
+    technique-cooldown-seconds: 6
+    # Sneak + right-click technique.
+    secondary-technique-cooldown-seconds: 10
+    damage-multiplier: 1.0
 
 abilities:
   SOUL_REAPER:
