@@ -179,6 +179,17 @@ public final class BankaiService implements Listener {
         }
     }
 
+    /** Helping slay a Vasto Lorde in a first-form release counts as one mastery victory. */
+    public void recordBossVictory(Player player) {
+        if (mastering(player) && awakenings.releases().isActive(player) && !awakenings.releases().isAdvanced(player)
+                && count(player, winsKey) < winGoal()) {
+            increment(player, winsKey);
+            player.sendMessage(Component.text("The Vasto Lorde's fall counts toward your mastery: "
+                    + count(player, winsKey) + "/" + winGoal() + " victories.", NamedTextColor.GOLD));
+            checkMastery(player);
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDeath(PlayerDeathEvent event) {
         Player rival = event.getPlayer();

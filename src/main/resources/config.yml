@@ -58,7 +58,18 @@ hueco-mundo:
     max-loaded: 24
     max-near-player: 4
     adjuchas-weight: 22
-    vasto-lorde-weight: 4
+  # The apex Hollow. Only one exists at a time, and it never spawns as an ordinary Hollow.
+  vasto-lorde:
+    enabled: true
+    # Chance, per 10-second check, that one stirs near a player deep in the desert (about once per 8 minutes there).
+    spawn-chance: 0.02
+    min-distance-from-gate: 250
+    # Wait after a kill before another can appear. Half this if it despawns or the server stops mid-fight.
+    cooldown-minutes: 90
+    health: 600
+    # Extra health for each additional player within 64 blocks when it appears (capped at 1024 total).
+    health-per-extra-player: 150
+    damage: 14
 
 awakenings:
   # Shikai and equivalent first forms never require rank. Lower rank numbers are stronger.
