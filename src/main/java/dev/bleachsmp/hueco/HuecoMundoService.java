@@ -250,6 +250,10 @@ public final class HuecoMundoService implements Listener {
         }
     }
 
+    /** Trees, spires and bones: hollows should stand on the sand, not on top of these. */
+    private static final java.util.Set<Material> FEATURE_BLOCKS = java.util.EnumSet.of(Material.QUARTZ_BLOCK,
+            Material.SMOOTH_QUARTZ, Material.WHITE_STAINED_GLASS, Material.BONE_BLOCK, Material.END_ROD);
+
     private Location findSpawnLocation(Location center, String type) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         for (int attempt = 0; attempt < 16; attempt++) {
@@ -261,7 +265,8 @@ public final class HuecoMundoService implements Listener {
                 continue;
             }
             int y = world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
-            if (y <= world.getMinHeight() || !world.getBlockAt(x, y, z).getType().isSolid()) {
+            Material ground = world.getBlockAt(x, y, z).getType();
+            if (y <= world.getMinHeight() || !ground.isSolid() || FEATURE_BLOCKS.contains(ground)) {
                 continue;
             }
             Location feet = new Location(world, x + 0.5, y + 1, z + 0.5);

@@ -47,45 +47,10 @@ public final class HuecoMundoLayout {
                 && Math.abs((long) z - landmark.z()) <= landmark.radius() + margin);
     }
 
-    public static int height(long seed, int x, int z) {
-        double dunes = 70 + noise(seed, x / 120.0, z / 120.0) * 15
-                + noise(seed + 41, x / 37.0, z / 37.0) * 6
-                + Math.sin(x * 0.055 + z * 0.024 + noise(seed + 9, x / 90.0, z / 90.0) * 3) * 2.5;
-        for (Landmark landmark : LANDMARKS) {
-            double distance = Math.max(Math.abs((double) x - landmark.x()), Math.abs((double) z - landmark.z()));
-            if (distance <= landmark.radius()) {
-                return landmark.floorY();
-            }
-            if (distance < landmark.radius() + 16) {
-                double blend = smooth((distance - landmark.radius()) / 16.0);
-                return (int) Math.round(landmark.floorY() * (1 - blend) + dunes * blend);
-            }
-        }
-        return (int) Math.round(dunes);
-    }
-
-    public static double noise(long seed, double x, double z) {
-        int ix = (int) Math.floor(x);
-        int iz = (int) Math.floor(z);
-        double tx = smooth(x - ix);
-        double tz = smooth(z - iz);
-        double north = sample(seed, ix, iz) * (1 - tx) + sample(seed, ix + 1, iz) * tx;
-        double south = sample(seed, ix, iz + 1) * (1 - tx) + sample(seed, ix + 1, iz + 1) * tx;
-        return north * (1 - tz) + south * tz;
-    }
-
     public static long hash(long seed, int x, int y, int z) {
         long value = seed ^ (x * 341873128712L) ^ (z * 132897987541L) ^ (y * 42317861L);
         value = (value ^ (value >>> 30)) * 0xbf58476d1ce4e5b9L;
         value = (value ^ (value >>> 27)) * 0x94d049bb133111ebL;
         return value ^ (value >>> 31);
-    }
-
-    private static double sample(long seed, int x, int z) {
-        return (hash(seed, x, 0, z) >>> 11) * 0x1.0p-52 - 1;
-    }
-
-    private static double smooth(double value) {
-        return value * value * (3 - 2 * value);
     }
 }

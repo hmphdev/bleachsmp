@@ -26,6 +26,19 @@ Copy `target/bleach-smp-0.1.0.jar` into the server's `plugins` directory.
 
 The Garganta recipe is one Echo Shard, one Ender Eye, and one Ghast Tear. Right-click the crafted item to travel; use it again in Hueco Mundo to return. `/bleach garganta` provides the same travel action without consuming an item. The per-player return location is saved across restarts. Players arrive at the far end of the Severed Gate's lantern-lined approach, facing its broad staircase and twin 48-block towers. Hueco Mundo's terrain generates as players explore. Use a dedicated world name. These landmarks generate in new chunks. Configure its world name and Hollow population in `plugins/BleachSMP/config.yml`.
 
+### Hueco Mundo terrain
+
+The desert is split into regions that blend into each other:
+
+- **Dune seas**: long, wind-aligned ridges with a gentle windward slope and a steep slip face.
+- **Salt flats**: flat basins of bleached stone broken by a web of grey cracks.
+- **Bleached mesas**: terraced plateaus up to about 100 blocks high. Their cliffs show bands of calcite and older rock.
+- **The Forest of Menos**: dark caverns at about y 16–45 under roughly a third of the desert. Their floors are basalt and ash, and quartz trees grow in them, some tipped with faint light. Sinkholes about every 500 blocks drop into them. Each shaft ends in a drift of powder snow that breaks the fall. The only way back up is to build or dig out.
+
+Across the surface are leafless quartz trees, tilted crystal spires, the half-buried skeletons of something enormous with walk-in skulls, and scattered bone shards and faint lights. The terrain eases flat around every landmark. Hollows spawn on the sand, not on top of trees, spires or bones.
+
+Terrain is generated once per chunk, so a world explored before this update keeps its old terrain in visited areas. To see the new terrain everywhere, stop the server and delete the Hueco Mundo world folder (`HuecoMundo` by default). It and every landmark regenerate on the next start. Players' saved return locations are kept.
+
 The first time each player arrives through a Garganta after installing this feature, a short camera sweep reveals the Severed Gate before returning control at the normal arrival spot. The intro needs no resource pack or client mod. The player’s seen flag is saved across reconnects and server restarts, so later trips skip the cinematic. To disable it, set `hueco-mundo.arrival-cutscene: false` in `plugins/BleachSMP/config.yml`.
 
 Head north from the Severed Gate toward Las Noches at X 0, Z -384. The south causeway leads through the fortress wall into a lantern-lit courtyard with an arena ring and a walkable domed keep.

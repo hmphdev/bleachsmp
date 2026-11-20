@@ -10,39 +10,77 @@ import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
 
 public final class HuecoMundoGenerator extends ChunkGenerator {
-    private static final int TERRAIN_BASE_Y = 40;
     private static final int GATE_PLINTH_HEIGHT = 6;
     private final BlockData gateStep = Material.QUARTZ_SLAB.createBlockData();
-    private static final Material[] PALETTE = {
-            Material.WHITE_TERRACOTTA, Material.CALCITE, Material.WHITE_CONCRETE,
-            Material.QUARTZ_BLOCK, Material.WHITE_CONCRETE_POWDER
-    };
+    private static final Material[] STRATA = new Material[23];
+
+    static {
+        for (int band = 0; band < STRATA.length; band++) {
+            // Mostly bleached calcite, with thin bands of older, darker rock showing on the cliffs.
+            STRATA[band] = band == 0 ? Material.LIGHT_GRAY_TERRACOTTA
+                    : band <= 3 ? Material.WHITE_TERRACOTTA
+                    : band == 9 || band == 16 ? Material.WHITE_CONCRETE
+                    : Material.CALCITE;
+        }
+    }
 
     @Override
     public void generateNoise(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, ChunkData data) {
-        int minY = data.getMinHeight();
-        data.setRegion(0, minY, 0, 16, minY + 1, 16, Material.BEDROCK);
-        data.setRegion(0, minY + 1, 0, 16, TERRAIN_BASE_Y, 16, Material.WHITE_TERRACOTTA);
-
         long seed = worldInfo.getSeed();
+        int minY = data.getMinHeight();
         for (int localX = 0; localX < 16; localX++) {
             int blockX = chunkX * 16 + localX;
             for (int localZ = 0; localZ < 16; localZ++) {
                 int blockZ = chunkZ * 16 + localZ;
-                int height = HuecoMundoLayout.height(seed, blockX, blockZ);
-                for (int y = TERRAIN_BASE_Y; y <= height; y++) {
-                    int depth = height - y;
-                    Material material = depth == 0 ? PALETTE[4]
-                            : depth <= 2 ? PALETTE[1]
-                            : depth <= 6 ? PALETTE[2]
-                            : depth <= 10 ? PALETTE[3]
-                            : PALETTE[0];
-                    data.setBlock(localX, y, localZ, material);
-                }
+                buildColumn(data, seed, minY, localX, localZ, blockX, blockZ,
+                        HuecoTerrain.column(seed, blockX, blockZ));
             }
         }
 
+        new HuecoFeatures(seed).decorate(data, chunkX, chunkZ);
         generateLandmarks(data, chunkX, chunkZ);
+    }
+
+    private void buildColumn(ChunkData data, long seed, int minY, int localX, int localZ, int x, int z,
+            HuecoTerrain.Column column) {
+        int surface = column.surface();
+        data.setBlock(localX, minY, localZ, Material.BEDROCK);
+        data.setRegion(localX, minY + 1, localZ, localX + 1, 4, localZ + 1, Material.SMOOTH_BASALT);
+        int warp = (int) Math.round(HuecoTerrain.perlin(seed + 20, x / 80.0, z / 80.0) * 4);
+        for (int y = 4; y <= surface; y++) {
+            data.setBlock(localX, y, localZ, STRATA[Math.floorMod(y + warp, STRATA.length)]);
+        }
+
+        switch (column.kind()) {
+            case DUNE -> {
+                // Pale sand over the strata; concrete powder stays put because it always has ground below.
+                data.setRegion(localX, surface - 2, localZ, localX + 1, surface + 1, localZ + 1,
+                        Material.WHITE_CONCRETE_POWDER);
+            }
+            case FLAT -> {
+                boolean crack = HuecoTerrain.crackDistance(seed, x / 9.0, z / 9.0) < 0.09;
+                data.setBlock(localX, surface, localZ, crack ? Material.LIGHT_GRAY_CONCRETE : Material.WHITE_CONCRETE);
+            }
+            case MESA -> {
+                boolean drift = HuecoTerrain.perlin(seed + 21, x / 14.0, z / 14.0) > 0.35;
+                data.setBlock(localX, surface, localZ, drift ? Material.WHITE_CONCRETE_POWDER : Material.CALCITE);
+            }
+            case LANDMARK -> data.setBlock(localX, surface, localZ, Material.WHITE_CONCRETE_POWDER);
+        }
+
+        if (column.hasCave()) {
+            // The Forest of Menos: a dark hollow beneath the sand.
+            int floor = column.caveFloor();
+            data.setRegion(localX, floor + 1, localZ, localX + 1, column.caveCeiling(), localZ + 1, Material.AIR);
+            boolean ash = HuecoTerrain.perlin(seed + 22, x / 11.0, z / 11.0) > 0.2;
+            data.setBlock(localX, floor, localZ, ash ? Material.BLACK_CONCRETE_POWDER : Material.SMOOTH_BASALT);
+            data.setBlock(localX, floor - 1, localZ, Material.SMOOTH_BASALT);
+        }
+        if (column.hole()) {
+            // The shaft drops into a drift of powder snow that breaks the fall.
+            data.setRegion(localX, column.caveFloor() + 1, localZ, localX + 1, surface + 1, localZ + 1, Material.AIR);
+            data.setBlock(localX, column.caveFloor() + 1, localZ, Material.POWDER_SNOW);
+        }
     }
 
     @Override
