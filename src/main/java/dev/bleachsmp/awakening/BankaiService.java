@@ -403,7 +403,8 @@ public final class BankaiService implements Listener {
 
     private Kit chooseKit(Player player) {
         int[] evidence = awakenings.evidence(player);
-        Playstyle style = Playstyle.dominant(evidence);
+        // The Bankai is the same weapon as the Shikai, so it keeps the first form's playstyle.
+        Playstyle style = awakenings.weaponStyle(player, Playstyle.dominant(evidence));
         return new Kit(style, Playstyle.secondary(evidence, style));
     }
 

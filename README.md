@@ -45,6 +45,31 @@ Head north from the Severed Gate toward Las Noches at X 0, Z -384. The south cau
 
 Hueco Mundo's Hollows have animated models that work on vanilla clients without a resource pack: the Gillian is an 11-block-tall cloaked giant that spawns in open terrain, the Adjuchas is a six-limbed dune hunter, and the Vasto Lorde has a split mask, a horned crown, and blade-like arms. Aim at the creature's body rather than its decorative extremities: combat still uses the underlying mob's hitbox.
 
+### Garganta tears
+
+Every 45–90 minutes, if at least two players are in the overworld, a black rift starts tearing open in the sky 50–110 blocks from one of them. It only opens over open, dry ground. The server is told roughly where, and there is a 60-second countdown, so anyone can head there.
+
+- **Waves:** two waves of Adjuchas, then a **Menos Grande**. Waves scale with the number of players nearby.
+  - The Menos Grande has 300 health, plus 80 for each extra player.
+  - It fires a telegraphed Cero across the area: it charges, shows its aim line, then fires a beam that stops at blocks.
+- **Sealing:** clear the last wave to seal the tear.
+  - A shared loot pile drops where the rift stood, so expect a fight over it. It can hold diamonds, emeralds, golden apples, ender pearls, XP bottles, echo shards and ghast tears, which are the Garganta recipe ingredients, and rarely netherite scrap, totems or a notched apple.
+  - Everyone who dealt at least 20 damage also gets a personal share and XP.
+  - The Menos Grande counts as a boss for first-clear rank credit.
+- **Faction bonuses:**
+  - **Soul Reapers:** closing Gargantas is their duty, so their personal share and XP are doubled.
+  - **Hollows:** they devour every tear Hollow they kill, healing 2 hearts and gaining absorption.
+  - **Quincy:** each kill with a bow or crossbow adds a spoil to their share, up to 3.
+  - **Fullbringers:** they draw on the rift's residue for double XP from kills and a large XP bonus at the seal.
+- **No cheese:**
+  - Tear Hollows take no damage from lava, falls, drowning or traps.
+  - The Menos Grande can only be hurt by players.
+  - Hollows dragged more than 40 blocks away are pulled back.
+  - The tear closes on its own after 12 minutes, or after 2 minutes with no one nearby.
+- **Safe for builds:** no blocks are ever changed.
+
+Admins can open a tear near themselves with `/bleach boss tear`, which uses a 10-second countdown. Tune everything under `tears` in `config.yml`.
+
 ### Spiritual pressure
 
 Every player has a reiatsu level. Rank gives 1–5: rank 5 is 1 and rank 1 is 5. A first-form release adds 2 and an advanced release adds 4, so a rank 1 player in Bankai is at 9. Pressure never slows, blinds or stuns players.
@@ -141,79 +166,111 @@ Everything is tunable under `awakenings.crisis`; set `enabled: false` to unlock 
 
 `/bleach awakenings` shows the current stage. Set `awakenings.bankai.enabled: false` to restore advanced unlocks on evidence and rank alone. Existing advanced forms are unaffected. Operators with `bleachsmp.admin` can use `/bleach bankai <online player> stage <NONE|MASTERING|MASTERED|SUBJUGATED>`, `/bleach bankai <online player> trial`, or `/bleach bankai <online player> reset` to test progression without grinding.
 
-### Signature moves
+### The real roster
 
-Every form has its own signature move, used with **Q** (drop) on the starter item while released. No two forms share one:
-48 in all. Advanced forms use an empowered version: longer, wider and harder-hitting. Cooldown: 20s (14s in an advanced
-form), set by `signature-cooldown-seconds`. Signature hits get the same faction and element effects as techniques.
+Every released form is a real one from the series: Soul Reapers get zanpakutō, Hollows get Arrancar resurrecciones,
+Quincy get Sternritter Schrifts and Fullbringers get Fullbrings. There are 66 in all (19 zanpakutō, 18 resurrecciones,
+18 Schrifts and all 11 Fullbrings the series has).
 
-**Soul Reaper**
+- **Your playstyle picks the pool, your UUID picks the form.** Each playstyle has two to four forms per faction. The
+  pick is stable per player and spread evenly, so two players can share a form, but on a server of 25 most won't.
+- **The Bankai is the same weapon.** A player's advanced form is always their first form's Bankai, Segunda Etapa,
+  Vollständig or Complete Fullbring, chosen by their first form's playstyle. Players who unlocked an advanced form
+  before this change also follow their first form.
+- **Q is the signature ability** (20s cooldown, 14s and empowered in the advanced form). **F is the advanced form's
+  defining ability**, once per release. Where the series never revealed a Bankai (Aizen, Matsumoto, Kira, Ukitake), the
+  advanced ability says so and builds on what was shown.
+- Many abilities change the rules instead of just dealing damage: Kyōka Suigetsu hypnotises everyone who saw the
+  release, Suzumebachi kills in two stings on the same spot, Wabisuke doubles weight with every cut, Sakanade inverts
+  senses, Irooni and Karamatsu Shinjū play by game rules, The Balance passes misfortune on, Book of the End rewrites
+  memories so enemies can't hurt you, and Time Tells No Lies makes you pay for a broken contract. Hits that bend an
+  enemy's attacks only bend attacks on you (or, for redirect effects, onto whoever stands next to them).
 
-| Form | Signature | What it does |
-| --- | --- | --- |
-| Akagetsu | Blood Moon | Mark an enemy; your hits on it heal you, and the mark bursts when it fades. |
-| Kagerō | Heat Haze Double | Leave a decoy of yourself and vanish; the decoy explodes in darkness when struck. |
-| Ryūsei | Meteor Lance | Charge, then fire a piercing lance that hits harder the farther it flies. |
-| Hayate | Updraft | A wind column flings nearby enemies up and lifts you; your next plunging hit lands hard. |
-| Iwagane | Iron Wall | Raise a wall that destroys incoming projectiles and shoves enemies back. |
-| Mamorigami | Frozen Shrine | Encase yourself in ice, invulnerable and healing, then shatter it to freeze enemies. |
-| Homuramaru | Inferno Blade | Your melee hits explode in fire for a few seconds. |
-| Oboromaru | Thousand Petals | Steer a cloud of blade petals with your crosshair. |
-| Amagumo | Rain Prison | A raincloud traps an area, slowing enemies and striking them with water bolts. |
-| Kumokiri | Thunder Step | Three lightning blinks; press Q again to step, cutting everything you pass. |
-| Iwaoni | Toxic Spire | Plant a spire that pulses poison and drags enemies toward it. |
-| Kusarigami | Bell of Binding | A bell silences nearby enemies' techniques and signatures. |
+**Soul Reaper — zanpakutō (Shikai → Bankai)** — 19 forms
 
-**Hollow**
+| Playstyle | Form (whose) | Right-click / Sneak | Q: signature | Advanced form | F: advanced ability |
+| --- | --- | --- | --- | --- | --- |
+| Vanguard | **Zangetsu** (Ichigo Kurosaki) | Getsuga Tenshō / Shunpo Cut | **Getsuga Jūjishō**: two crossing Getsuga Tenshō fired as one cross-shaped slash | Tensa Zangetsu | **Kuroi Getsuga**: a giant black Getsuga Tenshō, then Bankai speed: every melee hit throws a black getsuga through your target |
+| Vanguard | **Ryūjin Jakka** (Genryūsai Yamamoto) | Taimatsu / Ennetsu Jigoku | **Jōkaku Enjō**: a ring of fire walls traps everyone near you; touching the wall burns | Zanka no Tachi | **Zanka no Tachi**: Higashi: one cut that erases everything in a line — then Nishi: a 15-million-degree aura that scorches everything near you |
+| Vanguard | **Nozarashi** (Kenpachi Zaraki) | Nozarashi Cleave / Kendō Rampage | **Eyepatch Off**: tear off the eyepatch: pay health to frenzy; every melee hit heals and stacks strength | Nozarashi (Bankai) | **Demon Form**: become a red demon: unstoppable, every swing cleaves everything in front and hits harder the longer you fight |
+| Mirage | **Kyōka Suigetsu** (Sōsuke Aizen) | Illusory Strike / Mirror Flower | **Kanzen Saimin**: complete hypnosis: everyone who saw you release loses sight of you and sees you standing still; your first hit on each lands hard | Kyōka Suigetsu: Kanzen Saimin | **Mugen Kyōka**: (Aizen never revealed a Bankai) every hypnotised enemy strikes their own side: their attacks land on whoever is nearest them, never you |
+| Mirage | **Katen Kyōkotsu** (Shunsui Kyōraku) | Kageoni / Takaoni | **Irooni**: call a colour at an enemy: you both take the colour's damage multiplier from each other — black hits hardest | Katen Kyōkotsu: Karamatsu Shinjū | **Karamatsu Shinjū**: a tragic play in four acts on one enemy: shared wounds, the pool of shame, the binding thread, and the final beheading |
+| Mirage | **Sakanade** (Shinji Hirako) | Inverted Haze / Reversed Strike | **Inverted World**: up is down, left is right: nearby enemies spin around and half their swings at you miss | Sakashima Yokoshima Happō Fusagari | **Happō Fusagari**: everyone around you loses friend from foe: their hits land on whoever stands near them |
+| Marksman | **Hyōrinmaru** (Tōshirō Hitsugaya) | Hyōryū / Hyōrinmaru Chain | **Hyōten Hyakkasō**: open the sky over an area; every enemy the snow touches becomes an ice flower | Daiguren Hyōrinmaru | **Sennen Hyōrō**: ice wings carry you, and a ring of ice pillars closes on the area you aim at, crushing everything inside |
+| Marksman | **Senbonzakura** (Byakuya Kuchiki) | Petal Torrent / Danku | **Senbonzakura**: steer a cloud of a thousand blade petals with your crosshair | Senbonzakura Kageyoshi | **Senkei**: rows of a thousand swords wall in everyone near you; blade petals cut everything trapped inside |
+| Marksman | **Shinsō** (Gin Ichimaru) | Shinsō Thrust / Butō Renjin | **Full Extension**: charge, then extend the blade in a piercing thrust that hits harder the farther it reaches | Kamishini no Yari | **Korose**: a 60-block thrust leaves a sliver of blade inside the first enemy hit; three seconds later it dissolves them from within |
+| Marksman | **Sode no Shirayuki** (Rukia Kuchiki) | Tsugi no Mai: Hakuren / San no Mai: Shirafune | **Some no Mai: Tsukishiro**: a circle opens under an enemy; everything inside freezes from the ground to the sky | Hakka no Togame | **Hakka no Togame**: drop to absolute zero: a white mist freezes enemies around you, and frozen enemies shatter when hit |
+| Wayfarer | **Zabimaru** (Renji Abarai) | Zabimaru Lash / Snake Fang Rush | **Higa Zekkō**: the blade's segments scatter around an enemy and all fang in at once | Sōō Zabimaru | **Hikotsu Taihō**: the bone snake opens its jaws and fires a huge reiatsu blast |
+| Wayfarer | **Haineko** (Rangiku Matsumoto) | Ash Veil / Shunpo | **Haineko**: the blade turns to ash that swirls around you, cutting; press Q again to fling it where you aim | Haineko (Bankai) | **Ash Storm**: (no Bankai revealed) a storm of blade ash follows you, cutting and blinding every enemy inside |
+| Wayfarer | **Suzumebachi** (Suì-Fēng) | Shunpo Sting / Shunkō | **Nigeki Kessatsu**: your first sting leaves the Hōmonka butterfly; a second sting on the same mark is death in two steps | Jakuhō Raikōben | **Jakuhō Raikōben**: brace, then fire a massive missile at where you aim; the recoil throws you back |
+| Artificer | **Tenken** (Sajin Komamura) | Tenken Fist / Earth Split | **Tenken**: a giant armoured arm appears overhead and slams down on where you aim | Kokujō Tengen Myō'ō | **Myō'ō**: a towering armoured giant rises behind you, cutting your enemies for the rest of the release |
+| Artificer | **Wabisuke** (Izuru Kira) | Hook Blade / Downward Cut | **Wabisuke**: every hit doubles your target's weight until they're crushed to their knees with their head bowed for the final cut | Wabisuke (Bankai) | **Bowed Heads**: (no Bankai revealed) the weight of every past cut falls on everyone near you at once |
+| Artificer | **Tachikaze** (Kensei Muguruma) | Wind Blade / Tachikaze Burst | **Tachikaze**: throw a wind blade that cuts and detonates in a blast of wind on whatever it touches | Tekken Tachikaze | **Tekken Tachikaze**: steel knuckle dusters: every melee hit explodes and blasts enemies away |
+| Keeper | **Minazuki** (Retsu Unohana) | Healing Kidō / Minazuki's Embrace | **Minazuki**: the great ray swallows your allies' wounds: heals and cleanses everyone near you | Minazuki (Bankai) | **Bankai: Minazuki**: a pool of blood that rots enemies and heals you and your allies; your blade heals you with every cut |
+| Keeper | **Sōgyo no Kotowari** (Jūshirō Ukitake) | Wave Shield / Returned Lightning | **Sōgyo no Kotowari**: absorb the damage of incoming attacks for a few seconds, then return it as lightning around you | Kamikake: Mimihagi | **Kamikake: Mimihagi**: (no Bankai revealed) Mimihagi stills everything: enemies near you lose their buffs and slow to a crawl; allies recover |
+| Keeper | **Ashisogi Jizō** (Mayuri Kurotsuchi) | Ashisogi Hook / Poison Mist | **Ashisogi Jizō**: each cut paralyses a little more: legs, then arms, then the whole body | Konjiki Ashisogi Jizō | **Konjiki Ashisogi Jizō**: the golden giant breathes a lethal poison cloud ahead of you; you carry the antidote |
 
-| Form | Signature | What it does |
-| --- | --- | --- |
-| Lobo Carmesí | Feral Hunt | Pay health to frenzy: speed, and every melee hit heals and stacks strength. |
-| Espejismo | Mirage Swap | Swap places with an enemy and blind it. |
-| Halcón Negro | Black Talon Cero | Root yourself and fire a huge piercing cero. |
-| Viento Hueco | Sonido Storm | Flash around a target, striking it from every side. |
-| Coloso | Magma Fist | A line of magma eruptions that launches and burns. |
-| Caparazón | Shell Reflect | A shell that reflects projectiles and punishes melee attackers. |
-| Tiburón | Shark Dive | Dive into the ground and burst up under a target. |
-| Sombra Pálida | Fading Shade | Vanish from enemy sight; your first hit out of it lands hard. |
-| Escorpión | Stinger | Shoot a stinger; the venom detonates, stronger for every hit you land meanwhile. |
-| Águila Hueca | Eagle Dive | Soar and steer through the air, then crash down with lightning. |
-| Osario | Bone Cage | Cage an enemy in bone; it cannot leave. |
-| Araña Blanca | Web of Frost | Throw a frozen web that slows enemies and shields allies. |
+**Hollow — resurrección (Resurrección → Segunda Etapa)** — 18 forms
 
-**Quincy**
+| Playstyle | Form (whose) | Right-click / Sneak | Q: signature | Advanced form | F: advanced ability |
+| --- | --- | --- | --- | --- | --- |
+| Vanguard | **Pantera** (Grimmjow Jaegerjaquez) | Pantera Claws / Garra de la Pantera | **Pantera Pounce**: flash around a target, clawing it from every side | Pantera — Desgarrón | **Desgarrón**: ten giant claws of reiatsu, five from each hand, rake everything in front of you |
+| Vanguard | **Ira** (Yammy Llargo) | Ira Stomp / Cero | **Ira**: your rage makes you grow: bigger, tougher and stronger for a while | Ira — Furia | **Furia**: grow into a colossus; every blow shakes the ground around you |
+| Vanguard | **Santa Teresa** (Nnoitra Gilga) | Scythe Flurry / Crescent Scythe | **Hierro Más Fuerte**: the strongest Hierro of the Espada: shrug off most damage for a few seconds | Santa Teresa — Six Arms | **Six Arms**: grow four more arms: every melee hit strikes three times |
+| Mirage | **Brujería** (Zommari Rureaux) | Gemelos Sonido / Sonido Strike | **Amor**: an eye opens on an enemy: you control them — they can't hurt you and stagger toward your other enemies | Brujería — Amor | **Fifty Eyes**: fifty eyes open: every enemy near you falls under Amor |
+| Mirage | **Glotonería** (Aaroniero Arruruerie) | Shapeshift / Tentacle Grab | **Devour**: bite an enemy: heal by what you tear off, and steal their buffs | Glotonería — 33,650 Hollows | **Banquet**: the 33,650 Hollows inside you lash out with tentacles at everyone near you, feeding you |
+| Mirage | **Fornicarás** (Szayelaporro Granz) | Gas Veil / Cero | **Voodoo Doll**: make a doll of an enemy; press Q again to crush one of its organs | Fornicarás — Gabriel | **Organ Crush**: dolls of every enemy near you, crushed one after another |
+| Marksman | **Murciélago** (Ulquiorra Cifer) | Cero Oscuras / Sonido | **Luz de la Luna**: throw a green lance of light that bursts on impact | Resurrección: Segunda Etapa | **Lanza del Relámpago**: charge a lance of lightning and hurl it; the explosion is enormous |
+| Marksman | **Los Lobos** (Coyote Starrk) | Cero / Cero Rain | **Los Lobos**: a pack of spirit wolves runs at your enemies and explodes on them | Los Lobos — Lilynette | **Cero Metralleta**: a thousand ceros: a three-second machine-gun stream of ceros where you aim |
+| Marksman | **Tiburón** (Tier Harribel) | Ola Azul / La Gota | **Cascada**: a massive waterfall crashes down on the area you aim at | Tiburón — Gran Caída | **Gran Caída**: a colossal blade of compressed water, then Hirviendo: scalding water around you |
+| Wayfarer | **Giralda** (Dordoni Alessandro Del Socaccio) | Sonido Kick / Air Dive | **Torbellinos**: two tornado drills race forward from your legs, sweeping enemies up | Giralda — Torbellinos | **Cero Tornado**: a three-second tornado that drags enemies in and hurls them skyward |
+| Wayfarer | **Golondrina** (Cirucci Sanderwicci) | Feather Rain / Wing Rush | **Golondrina**: take to the air on wings of blades and shower the ground below with razor feathers | Golondrina — Wings of Blades | **Hundred Feathers**: a storm of razor feathers over a wide area |
+| Wayfarer | **Tigre Estoque** (Ggio Vega) | Pounce / Fang Flurry | **Sonido Tigre**: three sonido flashes; press Q again to step, cutting everything you pass | Tigre Estoque — Zarpazo | **Zarpazo**: strike up to five enemies in sequence from behind, then return |
+| Artificer | **Arrogante** (Barragan Luisenbarn) | Gran Caída / Arrogante Grip | **Respira**: breathe a cloud of senescence ahead of you: everything it touches ages and rots | Arrogante — Respira | **Senescencia**: you become time itself: everything near you rots, and arrows decay before they reach you |
+| Artificer | **Dragra** (Gantenbainne Mosqueda) | Dragra Fists / Dragon Stomp | **Dragon Rugir**: a dragon of reiatsu bursts from your fist and drills through everything ahead | Dragra — Garra de Dragón | **Garras de Dragón**: two volleys of three giant dragon-claw waves |
+| Artificer | **Verdugo** (Tesla Lindocruz) | Verdugo Charge / Tusk Slam | **Gore**: charge forward, carry everyone you hit on your tusks, and slam them down | Verdugo — Stampede | **Stampede**: three expanding rings of erupting earth |
+| Keeper | **Gamuza** (Nelliel Tu Odelschwanck) | Healing Saliva / Gamuza Charge | **Cero Doble**: swallow the damage of incoming attacks, then spit it back as a doubled cero | Gamuza — Lanzador Verde | **Lanzador Verde**: hurl a spinning green lance that drills through everything in a long line |
+| Keeper | **Trepadora** (Luppi Antenor) | Tentacle Bind / Tentacle Slam | **Trepadora**: eight tentacles seize the nearest enemies, holding and crushing them | Trepadora — Eight Arms | **Spike Barrage**: every tentacle sprouts spikes and stabs everything near you over and over |
+| Keeper | **Tres Bestias** (Apache, Mila Rose & Sung-Sun) | Pack Ward / Anaconda Bind | **Quimera Parca**: summon Ayon, the beast made from three arms, to fight for you | Ayon | **Tres Bestias**: Cierva gores, León smashes and Anaconda constricts the three nearest enemies |
 
-| Form | Signature | What it does |
-| --- | --- | --- |
-| The Assault | Blitz Volley | A rapid stream of reishi bolts that follows your aim. |
-| The Illusion | Mirror Feint | The next hit on you misses, and you strike back from behind the attacker. |
-| The Starshot | Sniper Star | Charge a 60-block shot; headshots deal extra damage. |
-| The Flight | Hirenkyaku Glide | Fly on reishi platforms for a few seconds. |
-| The Bulwark | Resonant Bastion | A dome that destroys projectiles and wears down enemies inside. |
-| The Haven | Blossom Haven | A blossom field that heals allies and pushes enemies out. |
-| The Rampage | Blood Debt | Store the damage you take, then release it in a blast that heals you. |
-| The Mirror | Mirror Theft | Steal an enemy's buffs. |
-| The Deluge | Tidal Wave | A wall of water that sweeps enemies away. |
-| The Zenith | Sunburst Halo | Orbiting suns that explode on enemies who come close. |
-| The Pillar | Pillar Vault | Ride a rising pillar, then topple it onto the enemies in front. |
-| The Tether | Soul Tether | Chain an enemy: it cannot run, and shares the damage you take. |
+**Quincy — Schrift (Schrift → Vollständig)** — 18 forms
 
-**Fullbringer**
+| Playstyle | Form (whose) | Right-click / Sneak | Q: signature | Advanced form | F: advanced ability |
+| --- | --- | --- | --- | --- | --- |
+| Vanguard | **H — The Heat** (Bazz-B) | Burner Finger 1 / Burner Finger 2 | **Burner Finger 3**: three fingers: a wide cone of fire that blasts everything in front | The Heat: Vollständig | **Burner Finger 4**: all four fingers: a colossal blade of fire sweeps all the way around you |
+| Vanguard | **O — The Overkill** (Driscoll Berci) | Heilig Bogen Fists / Heilig Pfeil Spread | **The Overkill**: every hit you land makes the next one stronger | The Overkill: Vollständig | **Kill Count**: every enemy that falls near you feeds you: full heal and more strength |
+| Vanguard | **P — The Power** (Meninas McAllon) | Power Slam / Power Rush | **The Power**: one punch with impossible strength sends an enemy flying | The Power: Vollständig | **Ground Splitter**: smash the ground so hard everyone around you is launched |
+| Mirage | **F — The Fear** (Äs Nödt) | Fear Thorns / Dread | **The Fear**: fear thorns pierce an enemy: blind, weak, slow and shaking | Tatarforas | **Tatarforas**: a cage of fear: enemies inside can't see, can't fight back and can't use their powers |
+| Mirage | **V — The Visionary** (Gremmy Thoumeaux) | Imagined Bombs / Imagined Step | **Imagination**: imagine something into being: bombs, quicksand or blades, at random | The Visionary: Vollständig | **Meteor**: imagine a meteor: it falls on where you aim |
+| Mirage | **L — The Love** (Pepe Waccabrada) | Love Shot / Heart Haze | **Love Kiss**: a heart that charms the enemy it hits: they can't hurt you and walk to you | The Love: Vollständig | **Love Rain**: hearts rain on everyone near you: every enemy is charmed |
+| Marksman | **X — The X-Axis** (Lille Barro) | X-Axis Shot / Heilig Pfeil Rain | **The X-Axis**: a shot that pierces everything between the muzzle and the target: walls, shields, everyone | Jilliel | **Holy Rays**: your halo rains X-axis rays over a wide area around where you aim |
+| Marksman | **A — The Antithesis** (Uryū Ishida) | Heilig Pfeil / Licht Regen | **The Antithesis**: reverse what has happened between you and an enemy: your wounds become theirs | Licht Regen | **Sprenger**: five Seele Schneider form a pentacle around where you aim, then it explodes |
+| Marksman | **T — The Thunderbolt** (Candice Catnipp) | Thunder Shot / Lightning Kick | **Galvano Blast**: call a bolt of lightning down on an enemy | The Thunderbolt: Vollständig | **Galvano Javelin**: a giant javelin of lightning, followed by a storm of bolts |
+| Wayfarer | **W — The Wind** (Nianzol Weizol) | Lichtsprung / Drift | **The Wind**: attacks pass through you like wind: the next three hits on you miss | The Wind: Vollständig | **Gale**: a storm wind blasts every enemy around you away and leaves you untouchable for a moment |
+| Wayfarer | **S — The Superstar** (Mask De Masculine) | Star Dash / Hero Punches | **Star Cheer**: the crowd cheers: heal and power up | The Superstar: Vollständig | **Star Rocket Dynamite**: fly like a rocket through enemies and explode at the end |
+| Wayfarer | **E — The Explode** (Bambietta Basterbine) | Reishi Bombs / Blast Jump | **The Explode**: anything you hit becomes a bomb that goes off a second later | The Explode: Vollständig | **Explode Barrage**: rise into the air and rain explosive reishi all around |
+| Artificer | **I — The Iron** (Cang Du) | Iron Claws / Iron Guard | **Eisern**: skin of steel: take far less damage, ignore knockback, and hurt anyone who hits you | The Iron: Vollständig | **Steel Field**: three expanding rings of erupting iron |
+| Artificer | **M — The Miracle** (Gerard Valkyrie) | Sword of Victory / Shield of the Miracle | **The Miracle**: every wound makes you bigger and stronger | Hoheitsrecht | **Hoheitsrecht**: become a giant; every blow sends out a shockwave |
+| Artificer | **G — The Glutton** (Liltotto Lamperd) | Bite Flurry / Spit | **Devour**: a huge mouth bites an enemy: heal by what you eat and steal their buffs | The Glutton: Vollständig | **The Glutton**: a gigantic mouth swallows everything in front of you, pulling them in |
+| Keeper | **J — The Jail** (Quilge Opie) | Jail Chains / Blut Vene | **The Jail**: lock an enemy inside a cage of light; it cannot leave | Biskiel | **Sklaverei**: drain the reishi out of everything around you: enemies wither and you heal |
+| Keeper | **B — The Balance** (Jugram Haschwalth) | Blut Vene / Heilig Pfeil | **The Balance**: half of every misfortune that befalls you is passed to the nearest enemy | Avaron | **Freund Schild**: every wound dealt to you is shared out among the enemies around you instead |
+| Keeper | **Z — The Zombie** (Giselle Gewelle) | Blood Spray / Zombie Grab | **The Zombie**: your blood splashes enemies: their attacks on you heal you, and creatures that die rise for you | The Zombie: Vollständig | **Zombie Army**: raise a horde of zombies to fight for you |
 
-| Form | Signature | What it does |
-| --- | --- | --- |
-| Crimson Knuckle | Charge Punch | Charge a punch (Q again to throw it); more charge, more damage. |
-| Mirror Coat | Mirror Coat | Melee attackers take back most of the damage they deal you. |
-| Bullet Echo | Echo Mark | Your next three hits echo a second later. |
-| Sky Runner | Sky Steps | Jump again and again in mid-air. |
-| Iron Maker | Iron Construct | Build an iron construct that fights for you. |
-| Heart Lock | Heart Link | Link to an ally: you share damage and both regenerate. |
-| Rewind Blade | Rewind | Mark this moment; Q again (or wait) to return to it, with your health from then. |
-| Shuffle Deck | Shuffle | Every enemy around you, and you, swap places at random. |
-| Echo Rain | Echo Turret | A floating turret that fires at nearby enemies. |
-| Meteor Boots | Meteor Kick | Dash-kick an enemy into the air and stomp it back down. |
-| Forge Ground | Molten Floor | Melt the ground: enemies burn, allies get speed and fire resistance. |
-| Lifeline | Last Line | The next lethal hit on you or a nearby ally is stopped. |
+**Fullbringer — Fullbring (Awakened → Complete Fullbring)** — 11 forms
+
+| Playstyle | Form (whose) | Right-click / Sneak | Q: signature | Advanced form | F: advanced ability |
+| --- | --- | --- | --- | --- | --- |
+| Vanguard | **Jackpot Knuckle** (Shishigawara Moe) | Slot Punches / Big Win | **Spin**: spin the reels and punch: a jackpot hits like a truck, a bust hits you instead | Jackpot Knuckle: Complete | **Triple Seven**: the machine is rigged: every punch is a jackpot for a while |
+| Vanguard | **Brazo Derecha de Gigante** (Yasutora Sado) | Golpe / Giant's Guard | **El Directo**: a straight punch that throws a blast of reiatsu ahead | Brazo Derecha de Gigante: Full | **Gigante**: the giant's arm armours you: shrug off damage and hit back at anyone who strikes you |
+| Mirage | **Book of the End** (Shūkurō Tsukishima) | Bookmark Cut / Turned Page | **Insert**: cut an enemy to insert yourself into their past: they remember you as a friend and won't harm you | Book of the End: Complete | **Rewrite**: insert yourself into the past of every enemy around you at once |
+| Marksman | **Brazo Izquierda del Diablo** (Yasutora Sado) | Diablo Shot / Diablo Rush | **La Muerte**: a skull-shaped blast of reiatsu that explodes at the end of its path | La Muerte | **Muerte Barrage**: a storm of La Muerte blasts over a wide area |
+| Marksman | **Cross of Scaffold** (Kūgo Ginjō) | Cross Slash / Fullbring Blast | **Steal**: the cross drinks from an enemy: steal their health and buffs | Cross of Scaffold: Complete | **Stolen Getsuga**: the power you stole from Ichigo: a giant black Getsuga Tenshō |
+| Wayfarer | **Fullbring** (Ichigo Kurosaki) | Bringer Light / Fullbring Getsuga | **Bringer Light**: step on the air: jump again and again in mid-air | Complete Fullbring | **Bringer Light Rush**: flash through up to five enemies one after another, then return |
+| Wayfarer | **Dirty Boots** (Jackie Tristan) | Boot Kicks / Mud Slide | **Dirty Boots**: the dirtier you get, the stronger you are: power up for every hit you've taken | Dirty Boots: Complete | **Filthy Stomp**: a stomp that sends everyone near you flying |
+| Artificer | **Dollhouse** (Riruka Dokugamine) | Love Gun Leash / Love Gun | **Love Gun**: shoot an enemy with the Love Gun: they shrink into a doll and can't fight | Dollhouse: Complete | **Bring In**: pull everyone near you into the dollhouse at once |
+| Artificer | **Invaders Must Die** (Yukio Hans Vorarlberna) | Pixel Walls / Invader Fire | **Invaders Must Die**: trap an area in a game box; pixel invaders shoot whoever is inside | Invaders Must Die: Final Stage | **Final Stage**: release the boss stage: invader drones dive-bomb every enemy near you |
+| Keeper | **Shun Shun Rikka** (Orihime Inoue) | Santen Kesshun / Koten Zanshun | **Sōten Kisshun**: a dome that rejects what happened: heals and cleanses everyone inside | Shiten Kōshun | **Shiten Kōshun**: reject every attack: damage enemies deal to you or allies near you is sent back at them |
+| Keeper | **Time Tells No Lies** (Giriko Kutsuzawa) | Clockwork Guard / Contract Chain | **Contract**: bet on an enemy: land three hits within ten seconds and it explodes; fail and you pay | Time Tells No Lies: Complete | **Time Limit**: a contract with time: overwhelming power for fifteen seconds, and weakness after |
 
 ### Elements
 
@@ -255,50 +312,22 @@ Every faction's first form is a 30-second release rather than a single move: Sou
 
 While released, the starter item has two techniques, both usable at any rank: **right-click** for the main technique (6-second cooldown) and **sneak + right-click** for the secondary one (10-second cooldown). The action bar shows both and their cooldowns.
 
-Kits are built so players rarely match:
+Each real form names its own two techniques (Getsuga Tenshō, Cero Oscuras, Burner Finger 1…; see the roster above). Underneath, every technique is one of twelve mechanics:
 
-- **Two forms per playstyle.** Each playstyle has two form variants with different names, call-outs, colours, and main techniques. Which one a player gets comes from their UUID, so it never changes for them and players split evenly between the two.
-- **A secondary technique from the secondary playstyle.** Players with a strong secondary habit get that playstyle's technique on sneak + right-click. Players without one get a stable pick from every other technique.
-- **Twelve techniques, styled per faction.** Each faction gives every technique its own name, colours, particles, sounds, and on-hit effect.
-
-That is more than a hundred kits per faction. In a simulation of 30 players with melee-heavy habits, about one pair shared an identical kit on average.
-
-| Playstyle | Form A main technique | Form B main technique |
-| --- | --- | --- |
-| Vanguard | **Wave**: a cutting wave that tears through its path | **Flurry**: lunge at a target and land a five-hit combo |
-| Mirage | **Blink**: strike from behind a target up to 12 blocks away, blinding it | **Scatter**: blind enemies, turn invisible, and hop around as afterimages |
-| Marksman | **Beam**: a long-range blast that bursts on impact | **Rain**: call ten bolts down on the area you aim at |
-| Wayfarer | **Dash**: cut every enemy you pass | **Skyfall**: leap high, then crash down in a shockwave (no fall damage) |
-| Artificer | **Slam**: hurl nearby enemies skyward | **Pillars**: a line of erupting pillars that launch enemies |
-| Keeper | **Ward**: heal and shield teammates, push enemies back | **Chains**: bind enemies in sight, drag them in, and root them |
-
-Form names and call-outs by faction (Form A / Form B):
-
-| Playstyle | Soul Reaper | Hollow | Quincy | Fullbringer |
-| --- | --- | --- | --- | --- |
-| Vanguard | Akagetsu / Homuramaru | Lobo Carmesí / Tiburón | The Assault / The Rampage | Crimson Knuckle / Rewind Blade |
-| Mirage | Kagerō / Oboromaru | Espejismo / Sombra Pálida | The Illusion / The Mirror | Mirror Coat / Shuffle Deck |
-| Marksman | Ryūsei / Amagumo | Halcón Negro / Escorpión | The Starshot / The Deluge | Bullet Echo / Echo Rain |
-| Wayfarer | Hayate / Kumokiri | Viento Hueco / Águila Hueca | The Flight / The Zenith | Sky Runner / Meteor Boots |
-| Artificer | Iwagane / Iwaoni | Coloso / Osario | The Bulwark / The Pillar | Iron Maker / Forge Ground |
-| Keeper | Mamorigami / Kusarigami | Caparazón / Araña Blanca | The Haven / The Tether | Heart Lock / Lifeline |
-
-Technique names by faction:
-
-| Technique | Soul Reaper | Hollow | Quincy | Fullbringer |
-| --- | --- | --- | --- | --- |
-| Wave | Crimson Fang | Garra Roja (triple claw) | Heiliger Sturm | Knuckle Breaker |
-| Blink | Haze Step | Sonido Fantasma | Schattenschritt | Reflection Swap |
-| Beam | Falling Star | Cero Oscuro (wider, faster) | Sternregen | Echo Shot |
-| Dash | Gale Passage | Embestida | Lichtsprung | Ground Skip |
-| Slam | Mountain Breaker | Terremoto | Erdbrecher | Forge Quake |
-| Ward | Shrine Ward | Coraza Viva | Lichtschild | Locket Ward |
-| Flurry | Hundred Moon Flurry | Frenesí | Klingenwirbel | Rapid Rewind |
-| Scatter | Mirror Haze | Eco Vacío | Spiegelbruch | Shuffle Step |
-| Rain | Heaven's Rain | Lluvia de Cero | Pfeilregen | Echo Barrage |
-| Skyfall | Falling Moon | Caída del Rey | Sternenfall | Meteor Drop |
-| Pillars | Stone Fangs (calcite) | Colmillos de Hueso (bone) | Lichtsäulen (glass) | Forge Spikes (iron) |
-| Chains | Binding Thread | Cadenas del Hambre | Bindungsfaden | Tether Line |
+| Mechanic | What it does |
+| --- | --- |
+| Wave | a cutting wave that tears through its path |
+| Blink | strike from behind a target up to 12 blocks away, blinding it |
+| Beam | a long-range blast that bursts on impact |
+| Dash | cut every enemy you pass |
+| Slam | hurl nearby enemies skyward |
+| Ward | heal and shield teammates, push enemies back |
+| Flurry | lunge at a target and land a five-hit combo |
+| Scatter | blind enemies, turn invisible, and hop around as afterimages |
+| Rain | call ten bolts down on the area you aim at |
+| Skyfall | leap high, then crash down in a shockwave (no fall damage) |
+| Pillars | a line of erupting pillars that launch enemies |
+| Chains | bind enemies in sight, drag them in, and root them |
 
 Pillars are temporary block displays, so they never change the world. `/bleach awakenings` shows each player's own form, call-out, and both techniques.
 
@@ -310,26 +339,8 @@ Advanced forms (Soul Reaper **Bankai**, Hollow **Segunda Etapa**, Quincy **Volls
 
 - **A two-second transformation.** A bolt of light (dark for Hollows) strikes the player, then a ten-block pillar of reiatsu rises. A nine-block shockwave and explosion follow. Nearby enemies are thrown back, and enemy players are briefly covered in Darkness. The call-out reaches players within 64 blocks.
 - **A lasting look.** Quincy grow flapping wings of light, Hollows grow bone horns over a ring of souls, Fullbringers are circled by four armour plates, and Soul Reapers give off black-and-colour reiatsu like flame.
-- **Stronger kits.** Techniques deal 40% more damage on shorter cooldowns (5 seconds, 8 for sneak), and the faction passive goes up one level. The advanced form rolls its own variant and secondary technique separately from the first form, so a player's Bankai does not simply mirror their Shikai.
-- **An ultimate on F, once per release**, set by the advanced form's playstyle (see the table above). Sneak + F seals the form early. The action bar shows whether the ultimate is ready.
-
-| Playstyle | Soul Reaper Bankai | Hollow Segunda Etapa | Quincy Vollständig | Complete Fullbring |
-| --- | --- | --- | --- | --- |
-| Vanguard | Akagetsu Tenrō / Homuramaru Gōen | Lobo Carmesí Rey / Tiburón Abisal | Sturmengel / Zornflügel | Crimson Knuckle Overdrive / Rewind Blade Zero |
-| Mirage | Kagerō Mugenkyō / Oboromaru Yumeutsutsu | Espejismo Eterno / Sombra Infinita | Spiegelengel / Trugbild | Mirror Coat Infinite / Shuffle Deck Joker |
-| Marksman | Ryūsei Gingaō / Amagumo Raiu | Halcón Negro Abismal / Escorpión Rey | Sternengel / Sintflut | Bullet Echo Arsenal / Echo Rain Storm |
-| Wayfarer | Hayate Tenkū / Kumokiri Shippū | Tormenta Hueca / Águila Tempestad | Himmelsflügel / Zenitflug | Sky Runner Ascension / Meteor Boots Impact |
-| Artificer | Iwagane Daichiō / Iwaoni Senzan | Coloso Titán / Osario Imperial | Bollwerkengel / Säulenthron | Iron Maker Foundry / Forge Ground Colossus |
-| Keeper | Mamorigami Kekkaiden / Kusarigami Shinbaku | Caparazón Sagrado / Araña Reina | Heiligenschein / Bandengel | Heart Lock Sanctuary / Lifeline Eternal |
-
-| Ultimate | Soul Reaper | Hollow | Quincy | Fullbringer |
-| --- | --- | --- | --- | --- |
-| Vanguard | Heaven-Rending Moon | Desgarro Final | Heiliges Gericht | Final Knuckle |
-| Mirage | Thousand Mirage Execution | Ejecución Fantasma | Phantomhinrichtung | Grand Shuffle |
-| Marksman | Galaxy Fall | Lluvia del Abismo | Sternenflut | Full Clip Storm |
-| Wayfarer | Divine Tempest | Huracán Hueco | Himmelssturm | Stratosphere Drop |
-| Artificer | World Breaker | Fin del Mundo | Weltbrecher | Foundry Quake |
-| Keeper | Sanctum of Light | Santuario Vacío | Lichtdom | Lifeline Sanctuary |
+- **Stronger kits.** Techniques deal 40% more damage on shorter cooldowns (5 seconds, 8 for sneak), and the faction passive goes up one level. The signature (Q) is empowered.
+- **The form's real advanced ability on F, once per release** (see the roster). Sneak + F seals the form early. The action bar shows whether it is ready.
 
 Tune the advanced duration, technique cooldowns, and power under `awakenings.advanced-release` in `config.yml`.
 

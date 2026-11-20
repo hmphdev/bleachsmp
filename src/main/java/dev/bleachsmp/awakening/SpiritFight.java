@@ -65,8 +65,8 @@ final class SpiritFight {
         UUID id = owner.getUniqueId();
         form = ReleaseService.form(id, faction, kit.style(), true);
         element = ReleaseService.element(id, faction, kit.style(), true);
-        main = ReleaseService.primary(id, kit.style(), true);
-        secondary = ReleaseService.secondary(id, kit.style(), kit.trait(), true);
+        main = ReleaseService.primary(id, faction, kit.style());
+        secondary = ReleaseService.secondary(id, faction, kit.style());
         maxHealth = health;
         // A zombie is player-shaped and has vanilla melee pathfinding; mannequins have no mob AI.
         Location spawn = arrival.clone().add(0, 0, 19).setDirection(new Vector(0, 0, -1));

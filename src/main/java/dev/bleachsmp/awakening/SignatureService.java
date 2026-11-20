@@ -64,77 +64,6 @@ import org.joml.Vector3f;
 public final class SignatureService implements Listener {
     // ---------------------------------------------------------------- names
 
-    /** [faction][variant][playstyle]: name and one-line description. */
-    private static final String[][][][] TABLE = {
-        { // SOUL_REAPER
-            {
-                {"Blood Moon", "mark an enemy; your hits on it heal you, and the mark bursts when it fades"},
-                {"Heat Haze Double", "leave a decoy of yourself and vanish; the decoy explodes in darkness when struck"},
-                {"Meteor Lance", "charge, then fire a piercing lance that hits harder the farther it flies"},
-                {"Updraft", "a wind column flings nearby enemies up and lifts you; your next plunging hit lands hard"},
-                {"Iron Wall", "raise a wall that destroys incoming projectiles and shoves enemies back"},
-                {"Frozen Shrine", "encase yourself in ice, invulnerable and healing, then shatter it to freeze enemies"}},
-            {
-                {"Inferno Blade", "your melee hits explode in fire for a few seconds"},
-                {"Thousand Petals", "steer a cloud of blade petals with your crosshair"},
-                {"Rain Prison", "a raincloud traps an area, slowing enemies and striking them with water bolts"},
-                {"Thunder Step", "three lightning blinks; press Q again to step, cutting everything you pass"},
-                {"Toxic Spire", "plant a spire that pulses poison and drags enemies toward it"},
-                {"Bell of Binding", "a bell silences nearby enemies' techniques and signatures"}}},
-        { // HOLLOW
-            {
-                {"Feral Hunt", "pay health to frenzy: speed, and every melee hit heals and stacks strength"},
-                {"Mirage Swap", "swap places with an enemy and blind it"},
-                {"Black Talon Cero", "root yourself and fire a huge piercing cero"},
-                {"Sonido Storm", "flash around a target, striking it from every side"},
-                {"Magma Fist", "a line of magma eruptions that launches and burns"},
-                {"Shell Reflect", "a shell that reflects projectiles and punishes melee attackers"}},
-            {
-                {"Shark Dive", "dive into the ground and burst up under a target"},
-                {"Fading Shade", "vanish from enemy sight; your first hit out of it lands hard"},
-                {"Stinger", "shoot a stinger; the venom detonates, stronger for every hit you land meanwhile"},
-                {"Eagle Dive", "soar and steer through the air, then crash down with lightning"},
-                {"Bone Cage", "cage an enemy in bone; it cannot leave"},
-                {"Web of Frost", "throw a frozen web that slows enemies and shields allies"}}},
-        { // QUINCY
-            {
-                {"Blitz Volley", "a rapid stream of reishi bolts that follows your aim"},
-                {"Mirror Feint", "the next hit on you misses, and you strike back from behind the attacker"},
-                {"Sniper Star", "charge a 60-block shot; headshots deal extra damage"},
-                {"Hirenkyaku Glide", "fly on reishi platforms for a few seconds"},
-                {"Resonant Bastion", "a dome that destroys projectiles and wears down enemies inside"},
-                {"Blossom Haven", "a blossom field that heals allies and pushes enemies out"}},
-            {
-                {"Blood Debt", "store the damage you take, then release it in a blast that heals you"},
-                {"Mirror Theft", "steal an enemy's buffs"},
-                {"Tidal Wave", "a wall of water that sweeps enemies away"},
-                {"Sunburst Halo", "orbiting suns that explode on enemies who come close"},
-                {"Pillar Vault", "ride a rising pillar, then topple it onto the enemies in front"},
-                {"Soul Tether", "chain an enemy: it cannot run, and shares the damage you take"}}},
-        { // FULLBRINGER
-            {
-                {"Charge Punch", "charge a punch (Q again to throw it); more charge, more damage"},
-                {"Mirror Coat", "melee attackers take back most of the damage they deal you"},
-                {"Echo Mark", "your next three hits echo a second later"},
-                {"Sky Steps", "jump again and again in mid-air"},
-                {"Iron Construct", "build an iron construct that fights for you"},
-                {"Heart Link", "link to an ally: you share damage and both regenerate"}},
-            {
-                {"Rewind", "mark this moment; Q again (or wait) to return to it, with your health from then"},
-                {"Shuffle", "every enemy around you, and you, swap places at random"},
-                {"Echo Turret", "a floating turret that fires at nearby enemies"},
-                {"Meteor Kick", "dash-kick an enemy into the air and stomp it back down"},
-                {"Molten Floor", "melt the ground: enemies burn, allies get speed and fire resistance"},
-                {"Last Line", "the next lethal hit on you or a nearby ally is stopped"}}}};
-
-    static String name(Faction faction, Playstyle style, int variant) {
-        return TABLE[faction.ordinal()][variant & 1][style.ordinal()][0];
-    }
-
-    static String description(Faction faction, Playstyle style, int variant) {
-        return TABLE[faction.ordinal()][variant & 1][style.ordinal()][1];
-    }
-
     // ---------------------------------------------------------------- state
 
     private record Cast(Player p, Release r, double amp, Element el, Color color) {
@@ -194,6 +123,10 @@ public final class SignatureService implements Listener {
         }
     }
 
+    void silence(Player player, long millis) {
+        silencedUntil.merge(player.getUniqueId(), System.currentTimeMillis() + millis, Math::max);
+    }
+
     boolean silenced(Player player) {
         return silencedUntil.getOrDefault(player.getUniqueId(), 0L) > System.currentTimeMillis();
     }
@@ -220,7 +153,10 @@ public final class SignatureService implements Listener {
             recast.run();
             return;
         }
-        String name = name(release.faction, release.style, release.variant);
+        if (service.canon().recast(player)) {
+            return;
+        }
+        String name = release.kit.signatureName();
         if (silenced(player)) {
             player.sendActionBar(Component.text("Silenced!", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
             return;
@@ -244,7 +180,10 @@ public final class SignatureService implements Listener {
 
     private boolean cast(Cast c) {
         Release r = c.r;
-        int key = r.faction.ordinal() * 100 + r.variant * 10 + r.style.ordinal();
+        if (r.kit.signature().legacy < 0) {
+            return service.canon().signature(c.p, r, c.amp);
+        }
+        int key = r.kit.signature().legacy;
         return switch (key) {
             case 0 -> bloodMoon(c);
             case 1 -> heatHaze(c);
