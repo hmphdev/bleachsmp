@@ -81,10 +81,43 @@ final class Canon {
         return list;
     }
 
+    /** Forms set by an admin for testing (player → form name). They win over the rolled form. */
+    static final Map<UUID, String> OVERRIDES = new java.util.concurrent.ConcurrentHashMap<>();
+
     /** A player's kit for a playstyle: stable per player, spread evenly across the pool. */
     static Kit kit(UUID id, Faction faction, Playstyle style) {
+        String override = OVERRIDES.get(id);
+        if (override != null) {
+            for (Kit kit : all()) {
+                if (kit.faction() == faction && kit.name().equals(override)) {
+                    return kit;
+                }
+            }
+        }
         List<Kit> pool = pool(faction, style);
         return pool.get((int) Math.floorMod(ReleaseService.hash(id, style.ordinal() + 1), (long) pool.size()));
+    }
+
+    static String normalize(String text) {
+        return java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
+    /** Finds a form by its name, advanced name or owner, ignoring accents, case and punctuation. */
+    static List<Kit> find(String query) {
+        String q = normalize(query);
+        List<Kit> exact = new ArrayList<>();
+        List<Kit> partial = new ArrayList<>();
+        for (Kit kit : all()) {
+            String name = normalize(kit.name());
+            if (name.equals(q) || normalize(kit.advancedName()).equals(q)) {
+                exact.add(kit);
+            } else if (!q.isEmpty() && (name.contains(q) || normalize(kit.owner()).contains(q)
+                    || normalize(kit.advancedName()).contains(q))) {
+                partial.add(kit);
+            }
+        }
+        return exact.isEmpty() ? partial : exact;
     }
 
     private static TextColor readable(int rgb) {

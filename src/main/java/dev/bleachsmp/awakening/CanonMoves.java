@@ -94,6 +94,8 @@ public final class CanonMoves implements Listener {
     private final NamespacedKey markerKey;
     private final NamespacedKey scaleKey;
     private final NamespacedKey anchorKey;
+    private final NamespacedKey formKey;
+    private final NamespacedKey testingKey;
 
     private final Map<UUID, EnumMap<Move, Long>> modes = new HashMap<>();
     private final Map<UUID, Bend> bends = new HashMap<>();
@@ -126,6 +128,150 @@ public final class CanonMoves implements Listener {
         markerKey = new NamespacedKey(plugin, "canon_entity");
         scaleKey = new NamespacedKey(plugin, "canon_scale");
         anchorKey = new NamespacedKey(plugin, "canon_anchor");
+        formKey = new NamespacedKey(plugin, "canon_form_override");
+        testingKey = new NamespacedKey(plugin, "canon_testing");
+        for (Player online : plugin.getServer().getOnlinePlayers()) {
+            loadOverride(online);
+        }
+    }
+
+    // ================================================================ admin testing
+
+    /** Admin-set test forms skip the advanced form's rank gate. */
+    boolean testing(Player player) {
+        return player.getPersistentDataContainer().has(testingKey);
+    }
+
+    private void loadOverride(Player player) {
+        String name = player.getPersistentDataContainer().get(formKey, PersistentDataType.STRING);
+        if (name == null) {
+            Canon.OVERRIDES.remove(player.getUniqueId());
+        } else {
+            Canon.OVERRIDES.put(player.getUniqueId(), name);
+        }
+    }
+
+    @EventHandler
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        loadOverride(event.getPlayer());
+    }
+
+    /**
+     * {@code /bleach form list [faction]}, {@code /bleach form <player> <form|random>}, {@code /bleach form <player> clear}.
+     * Gives a player a specific real form with both tiers unlocked, switching faction if needed, for testing.
+     */
+    public void command(org.bukkit.command.CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bleachsmp.admin")) {
+            sender.sendMessage(Component.text("You do not have permission to set forms.", NamedTextColor.RED));
+            return;
+        }
+        if (args.length >= 2 && args[1].equalsIgnoreCase("list")) {
+            for (dev.bleachsmp.faction.Faction faction : dev.bleachsmp.faction.Faction.values()) {
+                if (args.length >= 3 && !Canon.normalize(faction.name()).startsWith(Canon.normalize(args[2]))) {
+                    continue;
+                }
+                List<String> names = new ArrayList<>();
+                for (Canon.Kit kit : Canon.all()) {
+                    if (kit.faction() == faction) {
+                        names.add(kit.name());
+                    }
+                }
+                sender.sendMessage(Component.text(faction.displayName() + " (" + names.size() + "): ", faction.color())
+                        .append(Component.text(String.join(", ", names), NamedTextColor.GRAY)));
+            }
+            return;
+        }
+        if (args.length < 3) {
+            sender.sendMessage(Component.text("Usage: /bleach form list [faction] | /bleach form <player> <form name|random|clear>",
+                    NamedTextColor.YELLOW));
+            return;
+        }
+        Player target = plugin.getServer().getPlayerExact(args[1]);
+        if (target == null) {
+            sender.sendMessage(Component.text("That player must be online.", NamedTextColor.RED));
+            return;
+        }
+        String query = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
+        if (query.equalsIgnoreCase("clear")) {
+            target.getPersistentDataContainer().remove(formKey);
+            target.getPersistentDataContainer().remove(testingKey);
+            Canon.OVERRIDES.remove(target.getUniqueId());
+            releases.seal(target, false);
+            sender.sendMessage(Component.text(target.getName() + " is back on their rolled form.", NamedTextColor.GREEN));
+            return;
+        }
+        Canon.Kit kit;
+        if (query.equalsIgnoreCase("random")) {
+            List<Canon.Kit> all = Canon.all();
+            kit = all.get(ThreadLocalRandom.current().nextInt(all.size()));
+        } else {
+            List<Canon.Kit> found = Canon.find(query);
+            if (found.isEmpty()) {
+                sender.sendMessage(Component.text("No form matches \"" + query + "\". Try /bleach form list.", NamedTextColor.RED));
+                return;
+            }
+            if (found.size() > 1) {
+                List<String> names = new ArrayList<>();
+                for (Canon.Kit match : found) {
+                    names.add(match.name());
+                }
+                sender.sendMessage(Component.text("Several forms match: " + String.join(", ", names), NamedTextColor.YELLOW));
+                return;
+            }
+            kit = found.get(0);
+        }
+        releases.seal(target, false);
+        if (service.faction(target) != kit.faction()) {
+            plugin.forceFaction(target, kit.faction());
+        }
+        target.getPersistentDataContainer().set(formKey, PersistentDataType.STRING, kit.name());
+        target.getPersistentDataContainer().set(testingKey, PersistentDataType.BYTE, (byte) 1);
+        Canon.OVERRIDES.put(target.getUniqueId(), kit.name());
+        service.unlock(target, false, kit.style(), null);
+        service.unlock(target, true, kit.style(), null);
+        service.resetReleaseCooldown(target);
+        Component done = Component.text("Test form: " + kit.name() + " → " + kit.advancedName() + " (" + kit.owner() + ", "
+                + kit.faction().displayName() + "). Hold the starter: F = Shikai, /bleach release advanced = Bankai.",
+                kit.text());
+        target.sendMessage(done);
+        if (!sender.equals(target)) {
+            sender.sendMessage(done);
+        }
+    }
+
+    public List<String> complete(org.bukkit.command.CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bleachsmp.admin")) {
+            return List.of();
+        }
+        List<String> options = new ArrayList<>();
+        String typed;
+        if (args.length == 2) {
+            options.add("list");
+            for (Player online : plugin.getServer().getOnlinePlayers()) {
+                options.add(online.getName());
+            }
+            typed = args[1];
+        } else if (args[1].equalsIgnoreCase("list")) {
+            for (dev.bleachsmp.faction.Faction faction : dev.bleachsmp.faction.Faction.values()) {
+                options.add(faction.name().toLowerCase(java.util.Locale.ROOT));
+            }
+            typed = args[args.length - 1];
+        } else {
+            options.add("random");
+            options.add("clear");
+            for (Canon.Kit kit : Canon.all()) {
+                options.add(kit.name());
+            }
+            typed = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
+        }
+        String prefix = Canon.normalize(typed);
+        List<String> matches = new ArrayList<>();
+        for (String option : options) {
+            if (Canon.normalize(option).startsWith(prefix)) {
+                matches.add(option);
+            }
+        }
+        return matches;
     }
 
     // ================================================================ entry points
@@ -1087,6 +1233,7 @@ public final class CanonMoves implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         Player p = event.getPlayer();
         UUID id = p.getUniqueId();
+        Canon.OVERRIDES.remove(id);
         unscale(p);
         anchoredResistance(p, false, anchorKey);
         modes.remove(id);

@@ -224,6 +224,16 @@ public final class BleachSmpPlugin extends JavaPlugin {
         }
     }
 
+    /** Admin testing: moves a player to a faction regardless of an earlier choice, with a new starter item. */
+    public void forceFaction(Player player, Faction faction) {
+        UUID playerId = player.getUniqueId();
+        factions.put(playerId, faction);
+        rankPoints.putIfAbsent(playerId, 0);
+        savePlayerData();
+        starterItems.give(player, faction);
+        applyRankStats(player);
+    }
+
     public boolean assignFaction(Player player, Faction faction) {
         UUID playerId = player.getUniqueId();
         if (factions.containsKey(playerId)) {

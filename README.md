@@ -166,6 +166,11 @@ Everything is tunable under `awakenings.crisis`; set `enabled: false` to unlock 
 
 `/bleach awakenings` shows the current stage. Set `awakenings.bankai.enabled: false` to restore advanced unlocks on evidence and rank alone. Existing advanced forms are unaffected. Operators with `bleachsmp.admin` can use `/bleach bankai <online player> stage <NONE|MASTERING|MASTERED|SUBJUGATED>`, `/bleach bankai <online player> trial`, or `/bleach bankai <online player> reset` to test progression without grinding.
 
+**Testing a specific form:** admins can run `/bleach form <player> <form name>` (for example `/bleach form Steve kyoka`).
+It switches the player's faction if needed, unlocks both tiers of that form, clears the release cooldown and skips the
+advanced form's rank gate. `/bleach form <player> random` picks any form, `/bleach form list [faction]` lists them, and
+`/bleach form <player> clear` goes back to the player's rolled form.
+
 ### The real roster
 
 Every released form is a real one from the series: Soul Reapers get zanpakutō, Hollows get Arrancar resurrecciones,

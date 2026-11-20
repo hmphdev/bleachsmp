@@ -333,7 +333,7 @@ public final class AwakeningService {
             return;
         }
         // A changed rank configuration must not bypass the advanced form's rank gate.
-        if (advanced && plugin.getRank(player.getUniqueId()) > requiredRank()) {
+        if (advanced && plugin.getRank(player.getUniqueId()) > requiredRank() && !canon.testing(player)) {
             player.sendMessage(Component.text(formName(faction, true) + " requires Rank " + requiredRank() + " or better.",
                     NamedTextColor.YELLOW));
             return;
@@ -434,6 +434,10 @@ public final class AwakeningService {
      * The playstyle that picks a player's weapon. A Bankai is the same zanpakutō as its Shikai, so an advanced form
      * always uses the first form's playstyle when there is one.
      */
+    void resetReleaseCooldown(Player player) {
+        player.getPersistentDataContainer().remove(releaseReadyKey);
+    }
+
     Playstyle weaponStyle(Player player, Playstyle fallback) {
         Playstyle first = unlocked(player, false);
         return first != null ? first : fallback;
