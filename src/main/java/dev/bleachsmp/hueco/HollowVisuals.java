@@ -264,6 +264,7 @@ final class HollowVisuals implements Listener {
                     case LEFT_ARM, RIGHT_LEG -> step * .30f;
                     case RIGHT_ARM, LEFT_LEG -> -step * .30f;
                     case TAIL -> pulse * .11f + step * .075f;
+                    case HEAD -> pulse * .05f;
                 };
                 display.setTransformation(piece.pose(scale, lift, swing));
                 display.setInterpolationDelay(0);
