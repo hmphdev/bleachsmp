@@ -24,6 +24,7 @@ public final class AwakeningService {
     private final AwakeningPowers powers;
     private final ReleaseService releases;
     private final CrisisService crisis;
+    private final SignatureService signatures;
     private final NamespacedKey firstKey;
     private final NamespacedKey advancedKey;
     private final NamespacedKey firstTraitKey;
@@ -40,6 +41,7 @@ public final class AwakeningService {
         powers = new AwakeningPowers(this);
         releases = new ReleaseService(plugin, this);
         crisis = new CrisisService(plugin, this);
+        signatures = new SignatureService(plugin, this, releases);
         firstKey = new NamespacedKey(plugin, "first_awakening");
         advancedKey = new NamespacedKey(plugin, "advanced_awakening");
         firstTraitKey = new NamespacedKey(plugin, "first_awakening_trait");
@@ -60,6 +62,10 @@ public final class AwakeningService {
 
     public CrisisService crisis() {
         return crisis;
+    }
+
+    public SignatureService signatures() {
+        return signatures;
     }
 
     private boolean crisisEnabled() {
@@ -324,8 +330,11 @@ public final class AwakeningService {
     }
 
     boolean holdsStarter(Player player) {
+        return isOwnStarter(player, player.getInventory().getItemInMainHand());
+    }
+
+    boolean isOwnStarter(Player player, ItemStack item) {
         Faction faction = faction(player);
-        ItemStack item = player.getInventory().getItemInMainHand();
         if (faction == null || item.isEmpty() || !item.hasItemMeta()) {
             return false;
         }

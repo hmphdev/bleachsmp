@@ -384,7 +384,10 @@ public final class ReleaseService implements Listener {
         String text = "\"" + form.callout() + "\" A timed release. Right-click: " + techniqueName(faction, main) + " — "
                 + main.description + ". Sneak + right-click: " + techniqueName(faction, second) + " — "
                 + second.description + ". " + Theme.of(faction).onHit + " Element: " + element(id, faction, style, advanced).label
-                + " — it " + element(id, faction, style, advanced).effect + ".";
+                + " — it " + element(id, faction, style, advanced).effect + ". Q (signature): "
+                + SignatureService.name(faction, style, variant(id, style, advanced)) + " — "
+                + SignatureService.description(faction, style, variant(id, style, advanced))
+                + (advanced ? " (empowered)." : ".");
         if (advanced) {
             text += " Techniques hit harder. F (once per release): " + ultimateName(faction, style) + " — "
                     + ultimateDescription(style) + ". Sneak + F seals.";
@@ -394,9 +397,10 @@ public final class ReleaseService implements Listener {
 
     // ---------------------------------------------------------------- state
 
-    private static final class Release {
+    static final class Release {
         final Faction faction;
         final Playstyle style;
+        final int variant;
         final boolean advanced;
         final double power;
         final Form form;
@@ -414,14 +418,16 @@ public final class ReleaseService implements Listener {
         long nextImpactSoundAt;
         long nextHazardAt;
         long nextPatchAt;
+        long signatureReadyAt;
         /** Light: targets carrying a mark, and when it fades. Ice: when each target may be rooted again. */
         final Map<UUID, Long> marks = new HashMap<>();
         final Map<UUID, Long> rootReadyAt = new HashMap<>();
 
-        Release(Faction faction, Playstyle style, boolean advanced, double power, Form form, Element element,
-                Mechanic main, Mechanic second, long startedAt, long endsAt, BossBar bar) {
+        Release(Faction faction, Playstyle style, int variant, boolean advanced, double power, Form form,
+                Element element, Mechanic main, Mechanic second, long startedAt, long endsAt, BossBar bar) {
             this.faction = faction;
             this.style = style;
+            this.variant = variant;
             this.advanced = advanced;
             this.power = power;
             this.form = form;
@@ -443,6 +449,10 @@ public final class ReleaseService implements Listener {
     ReleaseService(BleachSmpPlugin plugin, AwakeningService service) {
         this.plugin = plugin;
         this.service = service;
+    }
+
+    Release get(Player player) {
+        return active.get(player.getUniqueId());
     }
 
     public boolean isActive(Player player) {
@@ -484,7 +494,8 @@ public final class ReleaseService implements Listener {
         BossBar bar = BossBar.bossBar(Component.text(tier + " — " + form.name(), form.text(), TextDecoration.BOLD),
                 1.0f, form.bar(), advanced ? BossBar.Overlay.NOTCHED_20 : BossBar.Overlay.NOTCHED_10);
         Element element = element(id, faction, style, advanced);
-        Release release = new Release(faction, style, advanced, power, form, element, primary(id, style, advanced),
+        Release release = new Release(faction, style, variant(id, style, advanced), advanced, power, form, element,
+                primary(id, style, advanced),
                 secondary(id, style, trait, advanced), now, now + seconds * 1000L, bar);
         active.put(id, release);
 
@@ -502,6 +513,7 @@ public final class ReleaseService implements Listener {
                         Duration.ofMillis(600))));
         player.sendMessage(Component.text("Right-click: " + techniqueName(faction, release.main)
                 + "  |  Sneak + right-click: " + techniqueName(faction, release.second)
+                + "  |  Q: " + SignatureService.name(faction, style, release.variant)
                 + (advanced ? "  |  F: " + ultimateName(faction, style) + "  |  Sneak + F: seal" : ""), form.text()));
         player.showBossBar(bar);
         player.addPotionEffect(new PotionEffect(theme.passive, seconds * 20, theme.passiveAmplifier + (advanced ? 1 : 0),
@@ -557,6 +569,9 @@ public final class ReleaseService implements Listener {
         player.sendActionBar(cooldown(techniqueName(release.faction, release.main), release.mainReadyAt, now, release)
                 .append(Component.text("   |   Sneak: ", NamedTextColor.DARK_GRAY))
                 .append(cooldown(techniqueName(release.faction, release.second), release.secondReadyAt, now, release))
+                .append(Component.text("   |   Q: ", NamedTextColor.DARK_GRAY))
+                .append(cooldown(SignatureService.name(release.faction, release.style, release.variant),
+                        release.signatureReadyAt, now, release))
                 .append(release.advanced ? Component.text("   |   F: ", NamedTextColor.DARK_GRAY)
                         .append(release.ultimateUsed
                                 ? Component.text(ultimateName(release.faction, release.style) + " spent", NamedTextColor.GRAY)
@@ -694,6 +709,7 @@ public final class ReleaseService implements Listener {
             release.task.cancel();
         }
         player.hideBossBar(release.bar);
+        service.signatures().onSeal(player);
         if (announce && player.isOnline()) {
             Location loc = player.getLocation();
             Vfx.sound(loc, Sound.BLOCK_BEACON_DEACTIVATE, 0.8f, 1.4f);
@@ -731,6 +747,10 @@ public final class ReleaseService implements Listener {
     public void useTechnique(Player player, boolean secondary) {
         Release release = active.get(player.getUniqueId());
         if (release == null) {
+            return;
+        }
+        if (service.signatures().silenced(player)) {
+            player.sendActionBar(Component.text("Silenced!", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
             return;
         }
         Mechanic mechanic = secondary ? release.second : release.main;
@@ -2109,7 +2129,7 @@ public final class ReleaseService implements Listener {
     }
 
     /** The standing spot on the ground at or just below/above a point, or null if there is none nearby. */
-    private static Location groundAt(Location point) {
+    static Location groundAt(Location point) {
         Block block = point.getBlock();
         for (int dy = 2; dy >= -4; dy--) {
             Block candidate = block.getRelative(0, dy, 0);

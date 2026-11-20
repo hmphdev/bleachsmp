@@ -91,6 +91,8 @@ awakenings:
     technique-cooldown-seconds: 6
     # Sneak + right-click technique.
     secondary-technique-cooldown-seconds: 10
+    # Q: the form's signature move.
+    signature-cooldown-seconds: 20
     damage-multiplier: 1.0
   # Advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) are longer, stronger releases with a
   # once-per-release ultimate on F. advanced-cooldown-seconds starts when they seal. damage-multiplier above
@@ -99,6 +101,7 @@ awakenings:
     duration-seconds: 40
     technique-cooldown-seconds: 5
     secondary-technique-cooldown-seconds: 8
+    signature-cooldown-seconds: 14
     power: 1.4
 
 abilities:

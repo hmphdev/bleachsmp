@@ -85,26 +85,102 @@ Self-moderation, since nobody has to watch:
 
 Everything is tunable under `awakenings.crisis`; set `enabled: false` to go back to unlocking on full evidence.
 
+### Signature moves
+
+Every form has its own signature move, used with **Q** (drop) on the starter item while released. No two forms share one:
+48 in all. Advanced forms use an empowered version: longer, wider and harder-hitting. Cooldown: 20s (14s in an advanced
+form), set by `signature-cooldown-seconds`. Signature hits get the same faction and element effects as techniques.
+
+**Soul Reaper**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| Akagetsu | Blood Moon | Mark an enemy; your hits on it heal you, and the mark bursts when it fades. |
+| Kagerō | Heat Haze Double | Leave a decoy of yourself and vanish; the decoy explodes in darkness when struck. |
+| Ryūsei | Meteor Lance | Charge, then fire a piercing lance that hits harder the farther it flies. |
+| Hayate | Updraft | A wind column flings nearby enemies up and lifts you; your next plunging hit lands hard. |
+| Iwagane | Iron Wall | Raise a wall that destroys incoming projectiles and shoves enemies back. |
+| Mamorigami | Frozen Shrine | Encase yourself in ice, invulnerable and healing, then shatter it to freeze enemies. |
+| Homuramaru | Inferno Blade | Your melee hits explode in fire for a few seconds. |
+| Oboromaru | Thousand Petals | Steer a cloud of blade petals with your crosshair. |
+| Amagumo | Rain Prison | A raincloud traps an area, slowing enemies and striking them with water bolts. |
+| Kumokiri | Thunder Step | Three lightning blinks; press Q again to step, cutting everything you pass. |
+| Iwaoni | Toxic Spire | Plant a spire that pulses poison and drags enemies toward it. |
+| Kusarigami | Bell of Binding | A bell silences nearby enemies' techniques and signatures. |
+
+**Hollow**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| Lobo Carmesí | Feral Hunt | Pay health to frenzy: speed, and every melee hit heals and stacks strength. |
+| Espejismo | Mirage Swap | Swap places with an enemy and blind it. |
+| Halcón Negro | Black Talon Cero | Root yourself and fire a huge piercing cero. |
+| Viento Hueco | Sonido Storm | Flash around a target, striking it from every side. |
+| Coloso | Magma Fist | A line of magma eruptions that launches and burns. |
+| Caparazón | Shell Reflect | A shell that reflects projectiles and punishes melee attackers. |
+| Tiburón | Shark Dive | Dive into the ground and burst up under a target. |
+| Sombra Pálida | Fading Shade | Vanish from enemy sight; your first hit out of it lands hard. |
+| Escorpión | Stinger | Shoot a stinger; the venom detonates, stronger for every hit you land meanwhile. |
+| Águila Hueca | Eagle Dive | Soar and steer through the air, then crash down with lightning. |
+| Osario | Bone Cage | Cage an enemy in bone; it cannot leave. |
+| Araña Blanca | Web of Frost | Throw a frozen web that slows enemies and shields allies. |
+
+**Quincy**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| The Assault | Blitz Volley | A rapid stream of reishi bolts that follows your aim. |
+| The Illusion | Mirror Feint | The next hit on you misses, and you strike back from behind the attacker. |
+| The Starshot | Sniper Star | Charge a 60-block shot; headshots deal extra damage. |
+| The Flight | Hirenkyaku Glide | Fly on reishi platforms for a few seconds. |
+| The Bulwark | Resonant Bastion | A dome that destroys projectiles and wears down enemies inside. |
+| The Haven | Blossom Haven | A blossom field that heals allies and pushes enemies out. |
+| The Rampage | Blood Debt | Store the damage you take, then release it in a blast that heals you. |
+| The Mirror | Mirror Theft | Steal an enemy's buffs. |
+| The Deluge | Tidal Wave | A wall of water that sweeps enemies away. |
+| The Zenith | Sunburst Halo | Orbiting suns that explode on enemies who come close. |
+| The Pillar | Pillar Vault | Ride a rising pillar, then topple it onto the enemies in front. |
+| The Tether | Soul Tether | Chain an enemy: it cannot run, and shares the damage you take. |
+
+**Fullbringer**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| Crimson Knuckle | Charge Punch | Charge a punch (Q again to throw it); more charge, more damage. |
+| Mirror Coat | Mirror Coat | Melee attackers take back most of the damage they deal you. |
+| Bullet Echo | Echo Mark | Your next three hits echo a second later. |
+| Sky Runner | Sky Steps | Jump again and again in mid-air. |
+| Iron Maker | Iron Construct | Build an iron construct that fights for you. |
+| Heart Lock | Heart Link | Link to an ally: you share damage and both regenerate. |
+| Rewind Blade | Rewind | Mark this moment; Q again (or wait) to return to it, with your health from then. |
+| Shuffle Deck | Shuffle | Every enemy around you, and you, swap places at random. |
+| Echo Rain | Echo Turret | A floating turret that fires at nearby enemies. |
+| Meteor Boots | Meteor Kick | Dash-kick an enemy into the air and stomp it back down. |
+| Forge Ground | Molten Floor | Melt the ground: enemies burn, allies get speed and fire resistance. |
+| Lifeline | Last Line | The next lethal hit on you or a nearby ally is stopped. |
+
 ### Elements
 
 Every form has an element that layers its own particles, sounds and a light on-hit effect over everything the form
 does: its techniques, impacts, aura, ultimate and release. Two forms with the same technique look and sound different.
 A form's Shikai and Bankai share an element.
 
-| Element | Look | On hit |
+Elements also change how every technique plays:
+
+| Element | Look | Mechanic |
 | --- | --- | --- |
-| Fire | flames, lava sparks | sets enemies alight |
-| Ice | snowflakes, frost rings | freezes |
-| Lightning | sparks, jagged arcs | brief stun |
-| Wind | gusts, swirling cloud | lifts enemies |
-| Shadow | ink, black smoke | darkness on players |
-| Water | splashes, bubbles | heavy slowness |
-| Blood | crimson spores, red streaks | drains a little life |
-| Petal / Pale Petal | cherry or pale-oak leaves | — |
-| Earth | rock debris, dust plumes | mining fatigue |
-| Light | light rods, glow | glowing |
-| Poison | green spores, slime | poison |
-| Sound | notes, ringing rings | nausea |
+| Fire | flames, lava sparks | burns; +20% on burning targets; leaves fire along wave, dash and beam paths |
+| Ice | snowflakes, frost rings | roots the first enemy hit (once per target every 4s); leaves frost trails |
+| Lightning | sparks, jagged arcs | arcs to 2 nearby enemies (3 in advanced forms) for 40% damage, stunning them |
+| Wind | gusts, swirling cloud | blasts enemies far away, at 85% damage |
+| Shadow | ink, black smoke | waves and beams pass through walls; +30% from behind; darkness on players |
+| Water | splashes, bubbles | drags enemies toward you |
+| Blood | crimson spores, red streaks | lifesteal: 15% of damage (25% advanced) |
+| Petal / Pale Petal | cherry or pale-oak leaves | a petal swarm keeps cutting for 3 more hits (5 advanced) |
+| Earth | rock debris, dust plumes | launches enemies with erupting rock |
+| Light | light rods, glow | marks enemies; the next hit on a mark deals +30% and consumes it |
+| Poison | green spores, slime | poison II; already-poisoned enemies start to wither; toxic trails |
+| Sound | notes, ringing rings | the hit rings out, dealing 30% to everything around the target |
 
 **Advanced forms turn the element up.** Their transformation ends in a bigger element-specific eruption (falling lightning,
 a petal cyclone, a pillar of light, a water wall…), their aura is denser, and their hits leave a two-second patch of the
