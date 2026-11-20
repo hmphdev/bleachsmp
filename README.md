@@ -53,6 +53,26 @@ The pack is generated from the same geometry as the block version (`HollowModel`
 
 To see the models in the real client, run `.github/scripts/hollow-screenshot.py` under a virtual display (as the screenshot workflow does). It photographs each Hollow from several angles into `target/hueco-capture/hollows/`. Pass `--no-pack` to photograph the block fallback.
 
+### Ability effects
+
+The same resource pack carries the ability effects. For players with it, the shared effect helpers draw glowing, animated 3D effects instead of particle dots. Every move that uses them gets the new look:
+
+- **Slashes** are diagonal crescents of light with a white-hot edge that leave a fading trail as they travel. Hollow waves are three claw marks.
+- **Beams and ceros** charge as a swelling orb at the muzzle, then fire a thick beam with a white core that thins out behind the shot. They end in a flash and a shockwave.
+- **Shockwaves** are rings of light racing across the ground. **Bursts** are star flashes, and big ones swell an orb of energy.
+- **Lines and tethers** become beams of light. Projectiles and dashes leave glowing streaks.
+
+Releases and advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) also get their own effects:
+
+- **First release:** Soul Reapers rise in a spiral inside a column of reiatsu. Hollows burn in soul-fire under a dark column. Quincy are ringed by six shafts of light. Fullbringers spin rings of power around their focus.
+- **Advanced entrance:** a jagged bolt strikes from the sky and a ten-block pillar of reiatsu rises around the user, spinning. Soul Reapers and Hollows get a dark core inside it. Then come a double shockwave and a scorched, cracked crater that lingers for ten seconds.
+- **Advanced aura:** Quincy grow two flapping wings of light, Hollows grow bone horns and smoulder with soul-fire, Fullbringers are circled by four glowing armour plates, and Soul Reapers burn with black-and-colour reiatsu flames. Every released form also wears a faint, turning sheath of reiatsu.
+- **Ultimates:** lightning storms strike as real bolts that leave scorch marks. The tempest is a funnel of spinning wind bands. World Breaker cracks the ground and sends shockwaves out with each ring of pillars. Sanctum raises a dome of light with turning rings.
+
+Effects are tinted to each form's colour, glow at full brightness, and fade out smoothly. Players without the pack see the original particles, and pack users don't see doubled particles. Effects are short-lived display entities that are never saved, and at most 700 exist at once.
+
+Admins can preview any form's effects without unlocking it, using `/bleach vfx release <first|advanced> [faction] [playstyle]`, `/bleach vfx use <main|second|ultimate>`, `/bleach vfx seal`, and `/bleach vfx demo` (every base effect in a row). `.github/scripts/vfx-screenshot.py` uses these to photograph each faction's advanced release in the real client.
+
 ### Garganta tears
 
 Every 45–90 minutes, if at least two players are in the overworld, a black rift starts tearing open in the sky 50–110 blocks from one of them. It only opens over open, dry ground. The server is told roughly where, and there is a 60-second countdown, so anyone can head there.

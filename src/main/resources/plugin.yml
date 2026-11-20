@@ -8,7 +8,7 @@ api-version: '1.21.11'
 commands:
   bleach:
     description: View your faction, rank, and awakenings, or release an awakened form.
-    usage: /bleach [status|choose|awakenings|release|garganta|boss]
+    usage: /bleach [status|choose|awakenings|release|garganta|boss|vfx]
     aliases: [bleachsmp]
 
 permissions:

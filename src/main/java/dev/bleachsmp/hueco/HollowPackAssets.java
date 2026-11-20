@@ -45,7 +45,7 @@ public final class HollowPackAssets {
     public static Map<String, byte[]> files() {
         Map<String, byte[]> files = new LinkedHashMap<>();
         JsonObject pack = new JsonObject();
-        pack.addProperty("description", "BleachSMP: Hollow models");
+        pack.addProperty("description", "BleachSMP: Hollow models and ability effects");
         pack.addProperty("pack_format", PACK_FORMAT);
         pack.addProperty("min_format", PACK_FORMAT);
         pack.addProperty("max_format", PACK_FORMAT);

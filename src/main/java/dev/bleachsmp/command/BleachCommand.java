@@ -42,6 +42,10 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args.length > 0 && args[0].equalsIgnoreCase("vfx")) {
+            plugin.awakenings().preview().command(player, args);
+            return true;
+        }
         if (args.length > 0 && args[0].equalsIgnoreCase("garganta")) {
             plugin.huecoMundo().activateGarganta(player);
             return true;
@@ -86,8 +90,11 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
             @NotNull String alias, @NotNull String[] args) {
         if (args.length == 1) {
             return matching(sender.hasPermission("bleachsmp.admin")
-                    ? List.of("status", "choose", "awakenings", "release", "garganta", "boss", "bankai")
+                    ? List.of("status", "choose", "awakenings", "release", "garganta", "boss", "bankai", "vfx")
                     : List.of("status", "choose", "awakenings", "release", "garganta", "boss"), args[0]);
+        }
+        if (args.length > 1 && args[0].equalsIgnoreCase("vfx") && sender.hasPermission("bleachsmp.admin")) {
+            return matching(plugin.awakenings().preview().complete(args), args[args.length - 1]);
         }
         if (args.length > 1 && args[0].equalsIgnoreCase("bankai")) {
             return plugin.awakenings().bankai().complete(sender, args);
