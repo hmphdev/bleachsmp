@@ -193,6 +193,7 @@ final class HollowVisuals implements Listener {
         /** 0 standing still … 1 walking, eased so gaits blend instead of snapping. */
         private float gait;
         private float yaw = Float.NaN;
+        private float lastStep;
         private float magnification = 1;
         private int hitUntil;
 
@@ -260,6 +261,8 @@ final class HollowVisuals implements Listener {
             float id = mob.getEntityId();
             float breath = (float) Math.sin(tick * (gillian ? .045 : .09) + id);
             float step = (float) Math.sin(stride);
+            float lastStep = this.lastStep;
+            this.lastStep = step;
             boolean hit = tick < hitUntil;
             float scale = magnification * (hit ? 1.025f : 1f);
 
@@ -269,9 +272,13 @@ final class HollowVisuals implements Listener {
             Vector3f bodyPivot;
             if (gillian) {
                 // No legs under the shroud: it heaves forward with each step, rolls side to side and leans in.
-                lift = (float) (1 - Math.cos(stride * 2)) * .035f * gait * magnification + breath * .012f * magnification;
+                lift = (float) (1 - Math.cos(stride * 2)) * .05f * gait * magnification + breath * .012f * magnification;
                 bodyPitch = .07f * gait + breath * .012f + (hit ? -.04f : 0);
-                bodyRoll = step * .05f * gait;
+                bodyRoll = step * .07f * gait;
+                // Each footfall lands with a thud and a puff of dust: the ground feels the weight.
+                if (gait > .5f && Math.signum(step) != Math.signum(lastStep) && lastStep != 0) {
+                    footfall(feet, step > 0 ? 1 : -1);
+                }
                 bodyPivot = new Vector3f(0, 0, 0);
             } else if (beast) {
                 // A loping run: the back bobs twice per stride and dips forward while it hunts.
@@ -320,6 +327,9 @@ final class HollowVisuals implements Listener {
                         // Long arms hang and drift a beat behind the body, like weight on a rope.
                         case LEFT_ARM -> (float) Math.sin(stride - .7) * .10f * gait + breath * .035f;
                         case RIGHT_ARM -> -(float) Math.sin(stride - .7) * .10f * gait - breath * .035f;
+                        // The feet stride out from under the shroud.
+                        case LEFT_LEG -> step * .32f * gait;
+                        case RIGHT_LEG -> -step * .32f * gait;
                         // The robe's back panel and hem trail behind.
                         case TAIL -> (float) Math.sin(stride - 1.1) * .06f * gait + breath * .02f;
                         case HEAD -> breath * .03f - .05f * gait;
@@ -348,6 +358,18 @@ final class HollowVisuals implements Listener {
                 display.setInterpolationDelay(0);
             }
             previous = feet;
+        }
+
+        private void footfall(Location feet, int side) {
+            Vector3f offset = new Vector3f(side * .24f * magnification, 0, .3f * magnification)
+                    .rotateY((float) Math.toRadians(-feet.getYaw()));
+            Location at = feet.clone().add(offset.x, .1, offset.z);
+            var ground = at.clone().subtract(0, .5, 0).getBlock().getBlockData();
+            if (!ground.getMaterial().isAir()) {
+                at.getWorld().spawnParticle(Particle.BLOCK, at, 18, .5, .05, .5, 0, ground);
+            }
+            at.getWorld().spawnParticle(Particle.DUST_PLUME, at, 4, .4, .02, .4, .01);
+            at.getWorld().playSound(at, Sound.ENTITY_RAVAGER_STEP, 1.4f, .45f);
         }
 
         private void removePieces() {

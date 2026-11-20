@@ -46,7 +46,8 @@ record HollowModel(float height, List<Piece> pieces) {
     private static HollowModel gillian() {
         Builder b = new Builder(4.35f);
         b.pivot(Joint.LEFT_ARM, -.5, 3.0, 0).pivot(Joint.RIGHT_ARM, .5, 3.0, 0)
-                .pivot(Joint.HEAD, 0, 3.05, 0).pivot(Joint.TAIL, 0, 1.2, 0);
+                .pivot(Joint.HEAD, 0, 3.05, 0).pivot(Joint.TAIL, 0, 1.2, 0)
+                .pivot(Joint.LEFT_LEG, -.24, .9, 0).pivot(Joint.RIGHT_LEG, .24, .9, 0);
         // Keep the torso narrow and let long, angled folds carry the silhouette out to the hem.
         b.box(SHADE, 0, .96, 0, .9, 1.92, .78, 0, 0, 0);
         b.box(SLATE, 0, .94, -.38, .77, 1.84, .28, 9, 0, 0, Joint.TAIL);
@@ -59,7 +60,13 @@ record HollowModel(float height, List<Piece> pieces) {
             b.box(SLATE, s * .66, 1.03, .39, .11, 1.98, .12, -4, s * 7, s * 17);
             b.box(SHADE, s * .84, .51, -.19, .29, 1.04, .52, 7, s * 10, s * 19, Joint.TAIL);
             b.box(BONE, s * .35, 2.42, .33, .08, .39, .09, 0, 0, s * -19);
-            b.box(MASK, s * .22, .055, .37, .17, .11, .24, 0, 0, 0);
+            // Clawed feet stamp out from under the hem with each step.
+            Joint leg = s < 0 ? Joint.LEFT_LEG : Joint.RIGHT_LEG;
+            b.box(SHADE, s * .24, .3, .12, .22, .5, .26, 0, 0, 0, leg);
+            b.box(BONE, s * .24, .07, .3, .3, .14, .46, 0, 0, 0, leg);
+            for (int toe = -1; toe <= 1; toe++) {
+                b.horn(MASK, s * .24 + toe * .09, .07, .52, 96, toe * 14, 0, 1, .16, .06, .03, leg);
+            }
         }
         // A ruff of white bone spikes around the neck.
         for (int i = 0; i < 12; i++) {
