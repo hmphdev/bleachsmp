@@ -44,24 +44,20 @@ record HollowModel(float height, List<Piece> pieces) {
         Builder b = new Builder(4.35f);
         b.pivot(Joint.LEFT_ARM, -.5, 3.0, 0).pivot(Joint.RIGHT_ARM, .5, 3.0, 0)
                 .pivot(Joint.HEAD, 0, 3.05, 0).pivot(Joint.TAIL, 0, 1.2, 0);
-        // The shroud flares toward a jagged hem.
-        b.box(SHADE, 0, .45, 0, 1.42, .9, 1.06, 0, 0, 0);
-        b.box(SHADE, 0, 1.35, 0, 1.22, 1.0, .94, 0, 0, 0);
-        b.hole(SHADE, 0, 2.45, 0, 1.04, 1.3, .84, .44, .36);
-        for (int i = 0; i < 7; i++) {
-            double angle = Math.PI * 2 * i / 7 + .3;
-            double x = Math.sin(angle) * .62;
-            double z = Math.cos(angle) * .45;
-            b.box(i % 2 == 0 ? SHADE : OBSIDIAN, x, .05 + (i % 2) * .06, z, .34, .34, .34, 0,
-                    Math.toDegrees(angle), 45, Joint.TAIL);
-        }
+        // Keep the torso narrow and let long, angled folds carry the silhouette out to the hem.
+        b.box(SHADE, 0, .96, 0, .9, 1.92, .78, 0, 0, 0);
+        b.box(SLATE, 0, .94, -.38, .77, 1.84, .28, 9, 0, 0, Joint.TAIL);
+        b.hole(SHADE, 0, 2.42, 0, 1.02, 1.16, .62, .46, .48);
+        b.hole(SLATE, 0, 2.42, .325, .62, .64, .09, .46, .48);
+        b.hole(SLATE, 0, 2.42, -.325, .62, .64, .09, .46, .48);
         for (int s : new int[] {-1, 1}) {
-            for (double fold : new double[] {.18, .44}) {
-                b.box(OBSIDIAN, s * fold, .9, .5, .07, 1.7, .06, 3, 0, s * -2);
-            }
+            b.box(SHADE, s * .59, 1.08, -.02, .39, 2.08, .77, 0, 0, s * 17);
+            b.box(OBSIDIAN, s * .53, 1.11, .365, .29, 2.12, .17, -4, s * 7, s * 14);
+            b.box(SLATE, s * .66, 1.03, .39, .11, 1.98, .12, -4, s * 7, s * 17);
+            b.box(SHADE, s * .84, .51, -.19, .29, 1.04, .52, 7, s * 10, s * 19, Joint.TAIL);
+            b.box(BONE, s * .35, 2.42, .33, .08, .39, .09, 0, 0, s * -19);
+            b.box(MASK, s * .22, .055, .37, .17, .11, .24, 0, 0, 0);
         }
-        b.box(MASK, -.22, .05, .5, .2, .12, .3, 0, 0, 0);
-        b.box(MASK, .22, .05, .5, .2, .12, .3, 0, 0, 0);
         // A ruff of white bone spikes around the neck.
         for (int i = 0; i < 12; i++) {
             double yaw = i * 30;
@@ -158,11 +154,17 @@ record HollowModel(float height, List<Piece> pieces) {
             b.box(MASK, s * .19, .06, .1, .23, .12, .4, 0, 0, 0, leg);
             b.horn(SHADE, s * .19, .05, .3, 95, 0, 0, 1, .14, .06, .02, leg);
         }
-        b.box(IVORY, 0, 1.42, 0, .5, .24, .3, 0, 0, 0);
-        b.box(IVORY, 0, 1.66, 0, .4, .3, .26, 0, 0, 0);
+        // Dark flanks and angled hip plates break up the ivory without covering the chest opening.
+        b.box(OBSIDIAN, 0, 1.42, 0, .5, .24, .3, 0, 0, 0);
+        b.box(SHADE, 0, 1.66, 0, .4, .3, .26, 0, 0, 0);
+        b.box(IVORY, 0, 1.66, .126, .19, .3, .065, 0, 0, 0);
         b.hole(IVORY, 0, 2.08, 0, .64, .58, .32, .24, .24);
+        b.hole(OBSIDIAN, 0, 2.08, .167, .43, .43, .07, .24, .24);
+        b.hole(SCAR, 0, 2.08, .205, .32, .32, .012, .24, .24);
         for (int s : new int[] {-1, 1}) {
-            b.box(STRIPE, s * .25, 2.05, .165, .035, .42, .02, 0, 0, s * -12);
+            b.box(SLATE, s * .151, 1.69, .14, .095, .27, .07, 0, 0, s * -18);
+            b.box(IVORY, s * .14, 1.44, .155, .19, .12, .06, 0, 0, s * 24);
+            b.box(STRIPE, s * .263, 2.05, .174, .035, .42, .026, 0, 0, s * -12);
         }
         // A black mane around the neck and shoulders.
         b.box(SHADE, 0, 2.38, -.02, .74, .18, .44, 0, 0, 0);
