@@ -13,6 +13,9 @@ record HollowModel(float height, List<Piece> pieces) {
     static final float GILLIAN_MAGNIFICATION = 2.5f;
     // The original 2.2x adult husk reached the original mask; grow both together.
     static final double GILLIAN_MOB_SCALE = 2.2 * GILLIAN_MAGNIFICATION;
+    /** Adjuchas are bigger than a person: a hunting beast, not a pet. The hitbox grows with the model. */
+    static final float ADJUCHAS_MAGNIFICATION = 1.5f;
+    static final double ADJUCHAS_MOB_SCALE = 1.15 * ADJUCHAS_MAGNIFICATION;
 
     private static final Material SHADE = Material.BLACK_CONCRETE;
     private static final Material OBSIDIAN = Material.POLISHED_BLACKSTONE;
@@ -218,6 +221,14 @@ record HollowModel(float height, List<Piece> pieces) {
 
     record Piece(Material material, Vector3f center, Vector3f size, Quaternionf rotation, Joint joint, Vector3f pivot) {
         Transformation pose(float scale, float lift, float swing) {
+            return pose(scale, lift, swing, null, null);
+        }
+
+        /**
+         * Poses the piece: its joint swings about the joint pivot, then the whole body leans and sways as one about
+         * {@code bodyPivot} (both in model space, before scaling).
+         */
+        Transformation pose(float scale, float lift, float swing, Quaternionf body, Vector3f bodyPivot) {
             Quaternionf jointRotation = new Quaternionf();
             if (joint == Joint.TAIL) {
                 jointRotation.rotateY(swing);
@@ -225,9 +236,14 @@ record HollowModel(float height, List<Piece> pieces) {
                 jointRotation.rotateX(swing);
             }
             Vector3f corner = new Vector3f(size).mul(-.5f).rotate(rotation).add(center)
-                    .sub(pivot).rotate(jointRotation).add(pivot).mul(scale).add(0, lift, 0);
-            return new Transformation(corner, jointRotation.mul(rotation), new Vector3f(size).mul(scale),
-                    new Quaternionf());
+                    .sub(pivot).rotate(jointRotation).add(pivot);
+            Quaternionf total = new Quaternionf(jointRotation).mul(rotation);
+            if (body != null) {
+                corner.sub(bodyPivot).rotate(body).add(bodyPivot);
+                total = new Quaternionf(body).mul(total);
+            }
+            corner.mul(scale).add(0, lift, 0);
+            return new Transformation(corner, total, new Vector3f(size).mul(scale), new Quaternionf());
         }
 
         boolean luminous() {

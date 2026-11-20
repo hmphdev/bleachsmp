@@ -384,17 +384,23 @@ public final class HuecoMundoService implements Listener {
         };
         double scale = switch (type) {
             case "vasto_lorde" -> 1.35;
-            case "adjuchas" -> 1.15;
+            case "adjuchas" -> HollowModel.ADJUCHAS_MOB_SCALE;
             default -> HollowModel.GILLIAN_MOB_SCALE;
         };
-        if (HollowModel.GILLIAN_TYPE.equals(type) && hollow instanceof Husk husk) {
+        // Husks can roll as babies: tiny and frantic. A Hollow never is.
+        if (hollow instanceof Husk husk) {
             husk.setAdult();
         }
         setAttribute(hollow, Attribute.MAX_HEALTH, health);
         setAttribute(hollow, Attribute.ATTACK_DAMAGE, damage);
         setAttribute(hollow, Attribute.SCALE, scale);
         setAttribute(hollow, Attribute.FOLLOW_RANGE, 36.0);
-        setAttribute(hollow, Attribute.MOVEMENT_SPEED, type.equals("adjuchas") ? 0.29 : 0.23);
+        // Giants lumber; Adjuchas lope. Speed is per block, so the Gillian's long stride still covers ground.
+        setAttribute(hollow, Attribute.MOVEMENT_SPEED, switch (type) {
+            case "adjuchas" -> 0.27;
+            case "vasto_lorde" -> 0.23;
+            default -> 0.17;
+        });
         hollow.setHealth(health);
         hollow.setCanPickupItems(false);
         hollow.customName(Component.text(name, type.equals("vasto_lorde")

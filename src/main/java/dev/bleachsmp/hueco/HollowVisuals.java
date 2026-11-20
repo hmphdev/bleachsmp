@@ -30,6 +30,8 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /** The server mob remains the sole hitbox and owner of AI, loot and progression. */
 final class HollowVisuals implements Listener {
@@ -184,9 +186,13 @@ final class HollowVisuals implements Listener {
         private final LivingEntity mob;
         private final HollowModel model;
         private final boolean gillian;
+        private final boolean beast;
         private final List<BlockDisplay> pieces = new ArrayList<>();
         private Location previous;
         private float stride;
+        /** 0 standing still … 1 walking, eased so gaits blend instead of snapping. */
+        private float gait;
+        private float yaw = Float.NaN;
         private float magnification = 1;
         private int hitUntil;
 
@@ -194,9 +200,23 @@ final class HollowVisuals implements Listener {
             this.mob = mob;
             this.model = model;
             this.gillian = gillian;
+            this.beast = model == HollowModel.forType("adjuchas");
         }
 
         private void updateSize() {
+            if (beast && magnification != HollowModel.ADJUCHAS_MAGNIFICATION) {
+                // Older Adjuchas were smaller, and some were babies; bring their hitbox up to the model.
+                if (mob instanceof Husk husk) {
+                    husk.setAdult();
+                    var size = husk.getAttribute(Attribute.SCALE);
+                    if (size != null) {
+                        size.setBaseValue(HollowModel.ADJUCHAS_MOB_SCALE);
+                    }
+                }
+                magnification = HollowModel.ADJUCHAS_MAGNIFICATION;
+                removePieces();
+                return;
+            }
             if (!gillian || magnification == HollowModel.GILLIAN_MAGNIFICATION
                     || !(mob instanceof Husk husk)) {
                 return;
@@ -220,18 +240,53 @@ final class HollowVisuals implements Listener {
         }
 
         private void update(Location feet, int tick) {
-            feet.setYaw(mob.getBodyYaw());
+            // Turn like something heavy: giants swing round slowly, beasts snap but not instantly.
+            float target = mob.getBodyYaw();
+            if (Float.isNaN(yaw)) {
+                yaw = target;
+            }
+            float maxTurn = gillian ? 5f : beast ? 16f : 28f;
+            float delta = ((target - yaw) % 360 + 540) % 360 - 180;
+            yaw += Math.max(-maxTurn, Math.min(maxTurn, delta));
+            feet.setYaw(yaw);
             feet.setPitch(0);
             float movement = previous == null ? 0 : (float) Math.hypot(feet.getX() - previous.getX(),
                     feet.getZ() - previous.getZ());
             boolean moving = movement > .018f;
-            if (moving) {
-                stride += Math.min(movement, .8f) * 6.5f;
+            gait += ((moving ? 1f : 0f) - gait) * (gillian ? .08f : .2f);
+            // Stride length grows with size, so big bodies take slow, long steps instead of scurrying.
+            float perBlock = gillian ? 1.6f : beast ? 3.1f : 6.5f / magnification;
+            stride += Math.min(movement, .8f) * perBlock;
+            float id = mob.getEntityId();
+            float breath = (float) Math.sin(tick * (gillian ? .045 : .09) + id);
+            float step = (float) Math.sin(stride);
+            boolean hit = tick < hitUntil;
+            float scale = magnification * (hit ? 1.025f : 1f);
+
+            float lift;
+            float bodyPitch;
+            float bodyRoll;
+            Vector3f bodyPivot;
+            if (gillian) {
+                // No legs under the shroud: it heaves forward with each step, rolls side to side and leans in.
+                lift = (float) (1 - Math.cos(stride * 2)) * .035f * gait * magnification + breath * .012f * magnification;
+                bodyPitch = .07f * gait + breath * .012f + (hit ? -.04f : 0);
+                bodyRoll = step * .05f * gait;
+                bodyPivot = new Vector3f(0, 0, 0);
+            } else if (beast) {
+                // A loping run: the back bobs twice per stride and dips forward while it hunts.
+                lift = Math.abs(step) * .05f * gait * magnification + breath * .01f * magnification;
+                bodyPitch = (float) Math.sin(stride * 2) * .035f * gait + .05f * gait + (hit ? -.06f : 0);
+                bodyRoll = step * .02f * gait;
+                bodyPivot = new Vector3f(0, 1.0f, 0);
+            } else {
+                lift = Math.abs(step) * .048f * gait * magnification + breath * .022f * magnification * (1 - gait);
+                bodyPitch = hit ? -.04f : 0;
+                bodyRoll = 0;
+                bodyPivot = new Vector3f(0, 1.2f, 0);
             }
-            float pulse = (float) Math.sin(tick * .10 + mob.getEntityId());
-            float step = moving ? (float) Math.sin(stride) : pulse * .12f;
-            float lift = (moving ? Math.abs(step) * .048f : pulse * .022f) * magnification;
-            float scale = magnification * (tick < hitUntil ? 1.025f : 1f);
+            Quaternionf body = new Quaternionf().rotateZ(bodyRoll).rotateX(bodyPitch);
+
             if (pieces.isEmpty() || pieces.stream().anyMatch(piece -> !piece.isValid())) {
                 removePieces();
                 for (HollowModel.Piece piece : model.pieces()) {
@@ -239,8 +294,8 @@ final class HollowVisuals implements Listener {
                         display.setBlock(piece.material().createBlockData());
                         display.setPersistent(false);
                         display.setGravity(false);
-                        display.setTeleportDuration(2);
-                        display.setInterpolationDuration(2);
+                        display.setTeleportDuration(gillian ? 3 : 2);
+                        display.setInterpolationDuration(gillian ? 3 : 2);
                         display.setViewRange(1);
                         display.setDisplayWidth(4 * magnification);
                         display.setDisplayHeight((model.height() + .4f) * magnification);
@@ -259,14 +314,37 @@ final class HollowVisuals implements Listener {
                 if (moved) {
                     display.teleport(feet);
                 }
-                float swing = switch (piece.joint()) {
-                    case BODY -> 0;
-                    case LEFT_ARM, RIGHT_LEG -> step * .30f;
-                    case RIGHT_ARM, LEFT_LEG -> -step * .30f;
-                    case TAIL -> pulse * .11f + step * .075f;
-                    case HEAD -> pulse * .05f;
-                };
-                display.setTransformation(piece.pose(scale, lift, swing));
+                float swing;
+                if (gillian) {
+                    swing = switch (piece.joint()) {
+                        // Long arms hang and drift a beat behind the body, like weight on a rope.
+                        case LEFT_ARM -> (float) Math.sin(stride - .7) * .10f * gait + breath * .035f;
+                        case RIGHT_ARM -> -(float) Math.sin(stride - .7) * .10f * gait - breath * .035f;
+                        // The robe's back panel and hem trail behind.
+                        case TAIL -> (float) Math.sin(stride - 1.1) * .06f * gait + breath * .02f;
+                        case HEAD -> breath * .03f - .05f * gait;
+                        default -> 0;
+                    };
+                } else if (beast) {
+                    swing = switch (piece.joint()) {
+                        // Diagonal pairs move together: front-left with back-right.
+                        case LEFT_ARM, RIGHT_LEG -> step * .42f * gait;
+                        case RIGHT_ARM, LEFT_LEG -> -step * .42f * gait;
+                        case TAIL -> (float) Math.sin(stride * .5 - 1.2) * .2f * gait + breath * .1f;
+                        // Keep the skull level and fixed on its prey while the back bobs.
+                        case HEAD -> -bodyPitch * .8f + breath * .04f;
+                        default -> 0;
+                    };
+                } else {
+                    swing = switch (piece.joint()) {
+                        case BODY -> 0;
+                        case LEFT_ARM, RIGHT_LEG -> step * .30f * gait;
+                        case RIGHT_ARM, LEFT_LEG -> -step * .30f * gait;
+                        case TAIL -> breath * .11f + step * .075f * gait;
+                        case HEAD -> breath * .05f;
+                    };
+                }
+                display.setTransformation(piece.pose(scale, lift, swing, body, bodyPivot));
                 display.setInterpolationDelay(0);
             }
             previous = feet;
