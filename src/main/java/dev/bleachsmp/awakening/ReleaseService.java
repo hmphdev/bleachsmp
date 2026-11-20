@@ -413,6 +413,10 @@ public final class ReleaseService implements Listener {
         boolean ultimateUsed;
         long nextImpactSoundAt;
         long nextHazardAt;
+        long nextPatchAt;
+        /** Light: targets carrying a mark, and when it fades. Ice: when each target may be rooted again. */
+        final Map<UUID, Long> marks = new HashMap<>();
+        final Map<UUID, Long> rootReadyAt = new HashMap<>();
 
         Release(Faction faction, Playstyle style, boolean advanced, double power, Form form, Element element,
                 Mechanic main, Mechanic second, long startedAt, long endsAt, BossBar bar) {
@@ -769,7 +773,8 @@ public final class ReleaseService implements Listener {
 
     /** Damages a target and applies the faction's on-hit effect with a small impact flash. */
     private void hit(Player caster, LivingEntity target, double amount, Release release) {
-        target.damage(damage(amount) * release.power, caster);
+        double dealt = damage(amount) * release.power * elementMultiplier(caster, target, release);
+        target.damage(dealt, caster);
         Location at = target.getLocation().add(0, target.getHeight() / 2, 0);
         accent(release, at, 8, 0.3, 0.3, 0.3, 0.05);
         Vfx.burst(at, release.form.color(), 8, 0.3, 1.2f);
@@ -781,6 +786,7 @@ public final class ReleaseService implements Listener {
             release.nextImpactSoundAt = now + 120;
             release.element.impactSound(at);
         }
+        elementEffect(caster, target, dealt, release, now);
         if (release.advanced) {
             hazard(caster, release, target.getLocation(), now);
         }
@@ -788,12 +794,220 @@ public final class ReleaseService implements Listener {
             case SOUL_REAPER -> target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 0));
             case HOLLOW -> {
                 target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 60, 0));
-                var max = caster.getAttribute(Attribute.MAX_HEALTH);
-                caster.setHealth(Math.min(max == null ? 20.0 : max.getValue(), caster.getHealth() + 1.0));
+                heal(caster, 1.0);
             }
             case QUINCY -> target.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 100, 0));
             case FULLBRINGER -> target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 60, 0));
         }
+    }
+
+    /** Signature moves and other systems strike through here so every hit gets the same faction and element rules. */
+    void strike(Player caster, LivingEntity target, double amount, Release release) {
+        hit(caster, target, amount, release);
+    }
+
+    private static void heal(Player player, double amount) {
+        var max = player.getAttribute(Attribute.MAX_HEALTH);
+        player.setHealth(Math.min(max == null ? 20.0 : max.getValue(), player.getHealth() + amount));
+    }
+
+    // ---------------------------------------------------------------- element mechanics
+
+    /** Elements that change how hard a hit lands. */
+    private static double elementMultiplier(Player caster, LivingEntity target, Release release) {
+        long now = System.currentTimeMillis();
+        return switch (release.element) {
+            // Wind trades damage for much stronger knockback.
+            case WIND -> 0.85;
+            // Fire burns hotter on a target that is already alight.
+            case FIRE -> target.getFireTicks() > 0 ? 1.2 : 1.0;
+            // Shadow strikes from behind for extra damage.
+            case SHADOW -> {
+                Vector facing = target.getLocation().getDirection().setY(0);
+                Vector toCaster = caster.getLocation().toVector().subtract(target.getLocation().toVector()).setY(0);
+                yield facing.lengthSquared() > 0.01 && toCaster.lengthSquared() > 0.01
+                        && facing.normalize().dot(toCaster.normalize()) < -0.3 ? 1.3 : 1.0;
+            }
+            // Light: a marked target takes extra damage from the hit that consumes the mark.
+            case LIGHT -> release.marks.getOrDefault(target.getUniqueId(), 0L) > now ? 1.3 : 1.0;
+            default -> 1.0;
+        };
+    }
+
+    /**
+     * What each element does on top of a hit. These change how every technique plays: lightning chains, sound
+     * splashes, water pulls, wind blasts away, earth launches, ice roots, blood drains, poison stacks, light marks,
+     * petals keep cutting.
+     */
+    private void elementEffect(Player caster, LivingEntity target, double dealt, Release release, long now) {
+        boolean advanced = release.advanced;
+        Location at = target.getLocation().add(0, target.getHeight() / 2, 0);
+        switch (release.element) {
+            case LIGHTNING -> {
+                // Arcs to the nearest other enemies.
+                int jumps = advanced ? 3 : 2;
+                LivingEntity from = target;
+                Set<UUID> struck = new HashSet<>(Set.of(target.getUniqueId()));
+                for (int i = 0; i < jumps; i++) {
+                    LivingEntity next = null;
+                    double best = 4.5 * 4.5;
+                    for (LivingEntity entity : from.getLocation().getNearbyLivingEntities(4.5)) {
+                        double distance = entity.getLocation().distanceSquared(from.getLocation());
+                        if (!struck.contains(entity.getUniqueId()) && distance < best && service.canStrike(caster, entity)) {
+                            best = distance;
+                            next = entity;
+                        }
+                    }
+                    if (next == null) {
+                        break;
+                    }
+                    struck.add(next.getUniqueId());
+                    Location a = from.getLocation().add(0, from.getHeight() / 2, 0);
+                    Location b = next.getLocation().add(0, next.getHeight() / 2, 0);
+                    jagged(a, b, release.element.tint);
+                    next.damage(dealt * 0.4, caster);
+                    next.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 10, 2));
+                    Vfx.sound(b, Sound.ENTITY_FIREWORK_ROCKET_TWINKLE_FAR, 0.8f, 1.6f);
+                    from = next;
+                }
+            }
+            case SOUND -> {
+                // The blow rings out and hits everything around the target.
+                double radius = advanced ? 3.5 : 2.5;
+                Vfx.ring(at, radius, 24, release.element.tint, 1.2f);
+                for (LivingEntity entity : target.getLocation().getNearbyLivingEntities(radius)) {
+                    if (!entity.equals(target) && service.canStrike(caster, entity)) {
+                        entity.damage(dealt * 0.3, caster);
+                        entity.getWorld().spawnParticle(Particle.NOTE, entity.getLocation().add(0, 2.1, 0), 1);
+                    }
+                }
+            }
+            case WATER -> later(() -> {
+                // Drags the target toward the caster, overriding the technique's push.
+                Vector pull = caster.getLocation().toVector().subtract(target.getLocation().toVector());
+                if (pull.lengthSquared() > 1) {
+                    target.setVelocity(pull.normalize().multiply(advanced ? 0.9 : 0.6).setY(0.2));
+                }
+            });
+            case WIND -> later(() -> {
+                Vector push = target.getLocation().toVector().subtract(caster.getLocation().toVector()).setY(0);
+                if (push.lengthSquared() < 0.01) {
+                    push = caster.getLocation().getDirection().setY(0);
+                }
+                target.setVelocity(push.normalize().multiply(advanced ? 1.9 : 1.4).setY(0.45));
+            });
+            case EARTH -> later(() -> {
+                target.setVelocity(target.getVelocity().setY(advanced ? 0.8 : 0.6));
+                target.getWorld().spawnParticle(Particle.BLOCK, target.getLocation(), 20, 0.4, 0.1, 0.4, 0,
+                        target.getLocation().subtract(0, 1, 0).getBlock().getType().isSolid()
+                                ? target.getLocation().subtract(0, 1, 0).getBlock().getBlockData()
+                                : release.element.block);
+            });
+            case ICE -> {
+                // The first hit on a target roots it; it can't be rooted again for a few seconds.
+                if (release.rootReadyAt.getOrDefault(target.getUniqueId(), 0L) <= now) {
+                    release.rootReadyAt.put(target.getUniqueId(), now + 4000);
+                    int ticks = advanced ? 30 : 20;
+                    target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks, 6));
+                    target.setVelocity(new Vector(0, Math.min(0, target.getVelocity().getY()), 0));
+                    target.getWorld().spawnParticle(Particle.BLOCK, target.getLocation().add(0, 0.5, 0), 25, 0.3, 0.5,
+                            0.3, 0, release.element.block);
+                    Vfx.sound(target.getLocation(), Sound.BLOCK_GLASS_PLACE, 1.0f, 0.6f);
+                }
+            }
+            case BLOOD -> heal(caster, dealt * (advanced ? 0.25 : 0.15));
+            case POISON -> {
+                // Venom stacks: a target already poisoned starts to wither too.
+                if (target.hasPotionEffect(PotionEffectType.POISON)) {
+                    target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, advanced ? 60 : 40, 0));
+                }
+                target.addPotionEffect(new PotionEffect(PotionEffectType.POISON, advanced ? 80 : 60, 1));
+            }
+            case LIGHT -> {
+                if (release.marks.getOrDefault(target.getUniqueId(), 0L) > now) {
+                    release.marks.remove(target.getUniqueId());
+                    target.getWorld().spawnParticle(Particle.END_ROD, at, 30, 0.2, 0.6, 0.2, 0.15);
+                    Vfx.sound(at, Sound.BLOCK_BEACON_POWER_SELECT, 1.0f, 2.0f);
+                } else {
+                    release.marks.put(target.getUniqueId(), now + (advanced ? 7000 : 5000));
+                    Vfx.ring(target.getLocation().add(0, target.getHeight() + 0.3, 0), 0.4, 10, release.element.tint, 0.9f);
+                }
+            }
+            case PETAL, PALE_PETAL -> {
+                // A swarm of blades keeps cutting for a moment after the hit.
+                int cuts = advanced ? 5 : 3;
+                new BukkitRunnable() {
+                    int cut;
+
+                    @Override
+                    public void run() {
+                        if (cut++ >= cuts || !target.isValid() || target.isDead()) {
+                            cancel();
+                            return;
+                        }
+                        Location body = target.getLocation().add(0, target.getHeight() / 2, 0);
+                        release.element.main(body, 8, 0.5, 0.6, 0.5, 0.02);
+                        Vfx.sound(body, Sound.BLOCK_CHERRY_LEAVES_BREAK, 0.6f, 1.4f);
+                        int noDamage = target.getNoDamageTicks();
+                        target.setNoDamageTicks(0);
+                        target.damage(1.0, caster);
+                        target.setNoDamageTicks(Math.max(noDamage, 0));
+                    }
+                }.runTaskTimer(plugin, 6L, 6L);
+            }
+            default -> { }
+        }
+    }
+
+    private void later(Runnable action) {
+        plugin.getServer().getScheduler().runTaskLater(plugin, action, 1L);
+    }
+
+    private static void jagged(Location from, Location to, Color color) {
+        Location point = from.clone();
+        Vector step = to.toVector().subtract(from.toVector()).multiply(0.25);
+        for (int i = 0; i < 4; i++) {
+            Location next = i == 3 ? to.clone() : point.clone().add(step).add((Math.random() - 0.5) * 0.6,
+                    (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.6);
+            Vfx.line(point, next, color, 0.9f, 0.2);
+            point.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, next, 2, 0.05, 0.05, 0.05, 0.02);
+            point = next;
+        }
+    }
+
+    /** Fire, ice and poison techniques leave a short-lived trail of their element along their path. */
+    private void trailPatch(Player caster, Release release, Location at) {
+        Element element = release.element;
+        if (at == null || (element != Element.FIRE && element != Element.ICE && element != Element.POISON)) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now < release.nextPatchAt) {
+            return;
+        }
+        release.nextPatchAt = now + 150;
+        Location center = at.clone().add(0, 0.1, 0);
+        int duration = release.advanced ? 50 : 30;
+        new BukkitRunnable() {
+            int tick;
+
+            @Override
+            public void run() {
+                if (tick > duration || !caster.isOnline()) {
+                    cancel();
+                    return;
+                }
+                element.main(center, 2, 0.5, 0.05, 0.5, 0.01);
+                if (tick % 10 == 0) {
+                    for (LivingEntity entity : center.getNearbyLivingEntities(1.3, 1.5)) {
+                        if (service.canStrike(caster, entity)) {
+                            element.onHit(caster, entity);
+                        }
+                    }
+                }
+                tick += 2;
+            }
+        }.runTaskTimer(plugin, 0L, 2L);
     }
 
     /** The faction's accent particle with the form's element layered over it. */
@@ -884,7 +1098,7 @@ public final class ReleaseService implements Listener {
             @Override
             public void run() {
                 Location center = origin.clone().add(forward.clone().multiply(1.5 + step * 1.5));
-                if (step >= 11 || center.getBlock().getType().isSolid()) {
+                if (step >= 11 || (!release.element.phases() && center.getBlock().getType().isSolid())) {
                     Vfx.burst(center, release.form.color(), 25, 0.6, 1.8f);
                     Vfx.sound(center, Sound.ENTITY_GENERIC_EXPLODE, 0.4f, 1.7f);
                     cancel();
@@ -900,6 +1114,9 @@ public final class ReleaseService implements Listener {
                 accent(release, center, 4, 0.5, 0.3, 0.5, 0.02);
                 if (release.theme == Theme.SOUL_REAPER) {
                     center.getWorld().spawnParticle(Particle.SWEEP_ATTACK, center, 1);
+                }
+                if (step % 2 == 0) {
+                    trailPatch(player, release, groundAt(center));
                 }
                 for (LivingEntity entity : center.getNearbyLivingEntities(size + 0.1)) {
                     if (hit.add(entity.getUniqueId()) && service.canStrike(player, entity)) {
@@ -999,6 +1216,9 @@ public final class ReleaseService implements Listener {
             public void run() {
                 for (int sub = 0; sub < speed; sub++) {
                     Location point = origin.clone().add(forward.clone().multiply(1 + step * speed + sub));
+                    if (sub == 0) {
+                        trailPatch(player, release, groundAt(point));
+                    }
                     accent(release, point, 1, 0, 0, 0, 0);
                     point.getWorld().spawnParticle(Particle.DUST, point, cero ? 6 : 2, cero ? 0.22 : 0.08,
                             cero ? 0.22 : 0.08, cero ? 0.22 : 0.08, 0, release.form.dust(cero ? 2.0f : 1.4f));
@@ -1009,7 +1229,8 @@ public final class ReleaseService implements Listener {
                             break;
                         }
                     }
-                    if (struck != null || point.getBlock().getType().isSolid() || step >= 10) {
+                    if (struck != null || (!release.element.phases() && point.getBlock().getType().isSolid())
+                            || step >= 10) {
                         burst(point, struck);
                         cancel();
                         return;
@@ -1061,6 +1282,7 @@ public final class ReleaseService implements Listener {
                 }
                 Location at = player.getLocation().add(0, 1, 0);
                 at.getWorld().spawnParticle(Particle.CLOUD, at, 4, 0.3, 0.4, 0.3, 0.02);
+                trailPatch(player, release, groundAt(player.getLocation()));
                 accent(release, at, 2, 0.3, 0.4, 0.3, 0.02);
                 Vfx.burst(at, release.form.color(), 6, 0.5, 1.3f);
                 for (LivingEntity entity : at.getNearbyLivingEntities(1.9)) {

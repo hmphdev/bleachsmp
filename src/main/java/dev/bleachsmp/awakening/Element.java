@@ -21,35 +21,35 @@ import org.bukkit.util.Vector;
  */
 enum Element {
     FIRE("Fire", Particle.FLAME, Particle.LAVA, Material.MAGMA_BLOCK, Color.fromRGB(255, 120, 20),
-            Sound.ITEM_FIRECHARGE_USE, Sound.ENTITY_BLAZE_SHOOT, "sets enemies alight"),
+            Sound.ITEM_FIRECHARGE_USE, Sound.ENTITY_BLAZE_SHOOT, "sets enemies alight, burns hotter on burning targets, and leaves fire along its path"),
     ICE("Ice", Particle.SNOWFLAKE, Particle.ITEM_SNOWBALL, Material.PACKED_ICE, Color.fromRGB(170, 230, 255),
-            Sound.BLOCK_POWDER_SNOW_BREAK, Sound.BLOCK_GLASS_BREAK, "freezes enemies"),
+            Sound.BLOCK_POWDER_SNOW_BREAK, Sound.BLOCK_GLASS_BREAK, "roots the first enemy it hits in ice and leaves frost along its path"),
     LIGHTNING("Lightning", Particle.ELECTRIC_SPARK, Particle.FIREWORK, Material.LIGHT_BLUE_CONCRETE,
             Color.fromRGB(150, 220, 255), Sound.ENTITY_LIGHTNING_BOLT_IMPACT, Sound.ENTITY_FIREWORK_ROCKET_TWINKLE,
-            "shocks enemies, stunning them for a moment"),
+            "arcs to nearby enemies, stunning them"),
     WIND("Wind", Particle.SMALL_GUST, Particle.CLOUD, Material.WHITE_WOOL, Color.fromRGB(220, 255, 240),
-            Sound.ENTITY_BREEZE_SHOOT, Sound.ENTITY_BREEZE_WIND_BURST, "throws enemies off balance"),
+            Sound.ENTITY_BREEZE_SHOOT, Sound.ENTITY_BREEZE_WIND_BURST, "blasts enemies far away, at slightly less damage"),
     SHADOW("Shadow", Particle.SQUID_INK, Particle.LARGE_SMOKE, Material.BLACK_CONCRETE, Color.fromRGB(25, 15, 35),
-            Sound.ENTITY_WITHER_SHOOT, Sound.ENTITY_PHANTOM_BITE, "blinds enemies for a moment"),
+            Sound.ENTITY_WITHER_SHOOT, Sound.ENTITY_PHANTOM_BITE, "passes through walls, hits harder from behind, and blinds players"),
     WATER("Water", Particle.SPLASH, Particle.BUBBLE_POP, Material.BLUE_STAINED_GLASS, Color.fromRGB(40, 120, 230),
-            Sound.ENTITY_PLAYER_SPLASH_HIGH_SPEED, Sound.ENTITY_GENERIC_SPLASH, "drags enemies down"),
+            Sound.ENTITY_PLAYER_SPLASH_HIGH_SPEED, Sound.ENTITY_GENERIC_SPLASH, "drags enemies toward you"),
     BLOOD("Blood", Particle.CRIMSON_SPORE, Particle.DAMAGE_INDICATOR, Material.REDSTONE_BLOCK,
             Color.fromRGB(140, 0, 15), Sound.ENTITY_EVOKER_FANGS_ATTACK, Sound.ENTITY_PLAYER_ATTACK_CRIT,
-            "drains a little life"),
+            "steals life with every hit"),
     PETAL("Petal", Particle.CHERRY_LEAVES, Particle.SPORE_BLOSSOM_AIR, Material.PINK_PETALS,
             Color.fromRGB(255, 170, 200), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, Sound.BLOCK_CHERRY_LEAVES_BREAK,
-            "cuts with a storm of petals"),
+            "keeps cutting with a swarm of petals after each hit"),
     PALE_PETAL("Pale Petal", Particle.PALE_OAK_LEAVES, Particle.WHITE_ASH, Material.PALE_MOSS_BLOCK,
             Color.fromRGB(215, 210, 205), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, Sound.BLOCK_CHERRY_LEAVES_BREAK,
-            "cuts with a storm of pale leaves"),
+            "keeps cutting with a swarm of pale leaves after each hit"),
     EARTH("Earth", Particle.BLOCK, Particle.DUST_PLUME, Material.COARSE_DIRT, Color.fromRGB(120, 85, 55),
-            Sound.BLOCK_GRAVEL_BREAK, Sound.ENTITY_IRON_GOLEM_DAMAGE, "staggers enemies"),
+            Sound.BLOCK_GRAVEL_BREAK, Sound.ENTITY_IRON_GOLEM_DAMAGE, "launches enemies with erupting rock"),
     LIGHT("Light", Particle.END_ROD, Particle.GLOW, Material.GLOWSTONE, Color.fromRGB(255, 250, 200),
-            Sound.BLOCK_BEACON_POWER_SELECT, Sound.BLOCK_AMETHYST_BLOCK_CHIME, "marks enemies with light"),
+            Sound.BLOCK_BEACON_POWER_SELECT, Sound.BLOCK_AMETHYST_BLOCK_CHIME, "marks enemies; the next hit on a mark lands harder"),
     POISON("Poison", Particle.SNEEZE, Particle.ITEM_SLIME, Material.SLIME_BLOCK, Color.fromRGB(110, 200, 40),
-            Sound.ENTITY_LLAMA_SPIT, Sound.ENTITY_SLIME_SQUISH, "poisons enemies"),
+            Sound.ENTITY_LLAMA_SPIT, Sound.ENTITY_SLIME_SQUISH, "stacks venom: poisoned enemies start to wither, and it leaves toxic ground along its path"),
     SOUND("Sound", Particle.NOTE, Particle.ENCHANTED_HIT, Material.NOTE_BLOCK, Color.fromRGB(190, 120, 255),
-            Sound.BLOCK_NOTE_BLOCK_CHIME, Sound.BLOCK_BELL_USE, "rattles enemies with a ringing blow");
+            Sound.BLOCK_NOTE_BLOCK_CHIME, Sound.BLOCK_BELL_USE, "rings out, hitting everything around the target");
 
     final String label;
     final Particle main;
@@ -154,6 +154,11 @@ enum Element {
         return (Math.random() * 2 - 1) * spread;
     }
 
+    /** Shadow techniques pass through walls. */
+    boolean phases() {
+        return this == SHADOW;
+    }
+
     void castSound(Location at, boolean advanced) {
         Vfx.sound(at, cast, this == LIGHTNING ? 0.35f : 0.8f, advanced ? 0.8f : 1.1f);
     }
@@ -168,21 +173,18 @@ enum Element {
             case FIRE -> target.setFireTicks(Math.max(target.getFireTicks(), 40));
             case ICE -> target.setFreezeTicks(Math.min(target.getMaxFreezeTicks() + 40, target.getFreezeTicks() + 60));
             case LIGHTNING -> target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 10, 2));
-            case WIND -> target.setVelocity(target.getVelocity().add(new Vector(0, 0.25, 0)));
+            case WIND -> { }
             case SHADOW -> {
                 if (target instanceof Player) {
                     target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 30, 0));
                 }
             }
             case WATER -> target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 1));
-            case BLOOD -> {
-                var max = caster.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
-                caster.setHealth(Math.min(max == null ? 20.0 : max.getValue(), caster.getHealth() + 0.5));
-            }
+            case BLOOD -> target.addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, 40, 1));
             case EARTH -> target.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 40, 0));
             case LIGHT -> target.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 60, 0));
             case POISON -> target.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 40, 0));
-            case SOUND -> target.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0));
+            case SOUND -> target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 30, 0));
             case PETAL, PALE_PETAL -> { }
         }
     }
