@@ -13,5 +13,5 @@ commands:
 
 permissions:
   bleachsmp.admin:
-    description: Mark and manage custom boss entities.
+    description: Manage custom bosses and test Bankai awakening stages.
     default: op

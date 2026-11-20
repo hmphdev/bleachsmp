@@ -58,6 +58,7 @@ public final class CrisisService implements Listener {
 
     private final BleachSmpPlugin plugin;
     private final AwakeningService service;
+    private final BankaiCrisis bankai;
     private final File bondsFile;
     /** Sorted pair key → seconds spent near each other without fighting. */
     private final Map<String, Integer> peaceful = new HashMap<>();
@@ -74,6 +75,7 @@ public final class CrisisService implements Listener {
     private boolean dirty;
 
     private static final class Fight {
+        final boolean advanced;
         double meter;
         long lastCombat;
         long lastLowGain;
@@ -85,11 +87,16 @@ public final class CrisisService implements Listener {
         final Map<UUID, Long> hitOut = new HashMap<>();
         final Map<UUID, Double> contribution = new HashMap<>();
         final Set<String> once = new HashSet<>();
+
+        Fight(boolean advanced) {
+            this.advanced = advanced;
+        }
     }
 
     CrisisService(BleachSmpPlugin plugin, AwakeningService service) {
         this.plugin = plugin;
         this.service = service;
+        bankai = new BankaiCrisis(plugin, service);
         bondsFile = new File(plugin.getDataFolder(), "bonds.yml");
     }
 
@@ -120,6 +127,7 @@ public final class CrisisService implements Listener {
     public void shutdown() {
         tasks.forEach(BukkitTask::cancel);
         tasks.clear();
+        bankai.shutdown();
         save();
     }
 
@@ -129,8 +137,8 @@ public final class CrisisService implements Listener {
         return Math.clamp(plugin.getConfig().getDouble("awakenings.crisis." + key, fallback), min, max);
     }
 
-    private double goal() {
-        return setting("meter-goal", 100, 10, 1000);
+    private double goal(boolean advanced) {
+        return advanced ? setting("bankai-meter-goal", 200, 10, 1000) : setting("meter-goal", 100, 10, 1000);
     }
 
     private double lowHealth() {
@@ -178,7 +186,7 @@ public final class CrisisService implements Listener {
     }
 
     /** A real kill ends a friendship: the pair starts again as strangers. */
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDeath(PlayerDeathEvent event) {
         Player dead = event.getPlayer();
         Player killer = dead.getKiller();
@@ -193,7 +201,7 @@ public final class CrisisService implements Listener {
         for (Player nearby : dead.getLocation().getNearbyPlayers(16)) {
             Fight fight = fights.get(nearby.getUniqueId());
             if (nearby.equals(dead) || fight == null || now - fight.lastCombat > COMBAT_WINDOW
-                    || !friends(nearby, dead) || !service.isDormant(nearby)) {
+                    || !friends(nearby, dead) || !dormant(nearby, fight.advanced)) {
                 continue;
             }
             if (fight.once.add("fallen:" + dead.getUniqueId())) {
@@ -205,12 +213,31 @@ public final class CrisisService implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        fights.remove(event.getPlayer().getUniqueId());
+        clearFight(event.getPlayer());
+        bankai.onQuit(event.getPlayer());
+    }
+
+    void clearFight(Player player) {
+        fights.remove(player.getUniqueId());
+    }
+
+    boolean isAwakening(Player player) {
+        return awakening.contains(player.getUniqueId());
     }
 
     // ---------------------------------------------------------------- the meter
 
-    private boolean validOpponent(Player victim, Player attacker) {
+    private boolean dormant(Player player, boolean advanced) {
+        return !isAwakening(player) && !service.bankai().inInnerWorld(player)
+                && (advanced ? service.bankai().isDormant(player) : service.isDormant(player));
+    }
+
+    private Fight fight(Player player, boolean advanced) {
+        return fights.compute(player.getUniqueId(), (id, old) -> old != null && old.advanced == advanced
+                ? old : new Fight(advanced));
+    }
+
+    boolean validOpponent(Player victim, Player attacker) {
         if (victim.equals(attacker) || !AwakeningService.canPlay(attacker) || friends(victim, attacker)) {
             return false;
         }
@@ -253,9 +280,11 @@ public final class CrisisService implements Listener {
         long now = System.currentTimeMillis();
         lastClash.put(pair(victim.getUniqueId(), attacker.getUniqueId()), now);
 
+        ReleaseService releases = service.releases();
         // The attacker fighting back while on the brink counts for their own meter.
-        if (validOpponent(attacker, victim) && service.isDormant(attacker)) {
-            Fight own = fights.computeIfAbsent(attacker.getUniqueId(), id -> new Fight());
+        boolean ownAdvanced = dormant(attacker, true);
+        if (validOpponent(attacker, victim) && (ownAdvanced ? releases.isActive(victim) : dormant(attacker, false))) {
+            Fight own = fight(attacker, ownAdvanced);
             own.hitOut.put(victim.getUniqueId(), now);
             own.lastCombat = now;
             if (attacker.getHealth() <= lowHealth()
@@ -266,10 +295,11 @@ public final class CrisisService implements Listener {
             }
         }
 
-        if (!validOpponent(victim, attacker) || !service.isDormant(victim)) {
+        boolean advanced = dormant(victim, true);
+        if (!validOpponent(victim, attacker) || !(advanced ? releases.isActive(attacker) : dormant(victim, false))) {
             return;
         }
-        Fight fight = fights.computeIfAbsent(victim.getUniqueId(), id -> new Fight());
+        Fight fight = fight(victim, advanced);
         fight.hitBy.put(attacker.getUniqueId(), now);
         fight.lastCombat = now;
         UUID foe = attacker.getUniqueId();
@@ -280,9 +310,17 @@ public final class CrisisService implements Listener {
                 fight.lastLowGain = now;
                 gain(victim, fight, foe, 20);
             }
-            ReleaseService releases = service.releases();
-            if (releases.isActive(attacker) && !releases.isActive(victim) && fight.once.add("outclassed:" + foe)) {
-                gain(victim, fight, foe, 25);
+            if (advanced || releases.isActive(attacker) && !releases.isActive(victim)) {
+                boolean stronger = advanced && releases.isAdvanced(attacker);
+                // A rival upgrading mid-fight adds only the difference.
+                if (fight.once.add("outclassed:" + foe)) {
+                    gain(victim, fight, foe, advanced && !stronger ? 10 : 25);
+                    if (stronger) {
+                        fight.once.add("advanced:" + foe);
+                    }
+                } else if (stronger && fight.once.add("advanced:" + foe)) {
+                    gain(victim, fight, foe, 15);
+                }
             }
             if (plugin.getRank(foe) < plugin.getRank(victim.getUniqueId()) && fight.once.add("outranked:" + foe)) {
                 gain(victim, fight, foe, 15);
@@ -296,11 +334,19 @@ public final class CrisisService implements Listener {
         }
 
         // The blow that would kill them awakens the form instead.
-        boolean lethal = event.getFinalDamage() >= victim.getHealth() + victim.getAbsorptionAmount();
-        if (lethal && fight.meter >= goal()
+        // Bukkit's final damage already accounts for absorption.
+        boolean lethal = event.getFinalDamage() >= victim.getHealth();
+        if (lethal && fight.meter >= goal(advanced)
                 && ThreadLocalRandom.current().nextDouble() < setting("trigger-chance", 1.0, 0.0, 1.0)) {
-            event.setCancelled(true);
-            awaken(victim, attacker);
+            if (advanced) {
+                if (bankai.start(victim, awakening)) {
+                    event.setCancelled(true);
+                    clearFight(victim);
+                }
+            } else {
+                event.setCancelled(true);
+                awaken(victim, attacker);
+            }
         }
     }
 
@@ -309,7 +355,7 @@ public final class CrisisService implements Listener {
         if (from != null) {
             fight.contribution.merge(from, amount, Double::sum);
         }
-        double goal = goal();
+        double goal = goal(fight.advanced);
         // Faint hints that something is stirring; the number itself stays hidden.
         if (!fight.stirred && fight.meter >= goal / 2) {
             fight.stirred = true;
