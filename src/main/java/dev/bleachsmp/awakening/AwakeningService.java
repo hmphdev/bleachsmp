@@ -26,6 +26,7 @@ public final class AwakeningService {
     private final CrisisService crisis;
     private final SignatureService signatures;
     private final BankaiService bankai;
+    private final PressureService pressure;
     private final NamespacedKey firstKey;
     private final NamespacedKey advancedKey;
     private final NamespacedKey firstTraitKey;
@@ -44,6 +45,7 @@ public final class AwakeningService {
         crisis = new CrisisService(plugin, this);
         signatures = new SignatureService(plugin, this, releases);
         bankai = new BankaiService(plugin, this);
+        pressure = new PressureService(plugin, this);
         firstKey = new NamespacedKey(plugin, "first_awakening");
         advancedKey = new NamespacedKey(plugin, "advanced_awakening");
         firstTraitKey = new NamespacedKey(plugin, "first_awakening_trait");
@@ -72,6 +74,10 @@ public final class AwakeningService {
 
     public BankaiService bankai() {
         return bankai;
+    }
+
+    public PressureService pressure() {
+        return pressure;
     }
 
     private boolean crisisEnabled() {

@@ -236,7 +236,7 @@ public final class SignatureService implements Listener {
         }
         int cooldown = Math.clamp(plugin.getConfig().getInt("awakenings." + (release.advanced ? "advanced-release" : "release")
                 + ".signature-cooldown-seconds", release.advanced ? 14 : 20), 0, 600);
-        release.signatureReadyAt = now + cooldown * 1000L;
+        release.signatureReadyAt = now + Math.round(cooldown * 1000L * service.pressure().cooldownFactor(player));
         player.sendActionBar(Component.text(name + "!", release.form.text(), TextDecoration.BOLD));
         release.element.castSound(player.getLocation(), release.advanced);
         Vfx.sound(player.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 0.4f, 1.6f);

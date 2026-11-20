@@ -45,6 +45,16 @@ Head north from the Severed Gate toward Las Noches at X 0, Z -384. The south cau
 
 Hueco Mundo's Hollows have animated models that work on vanilla clients without a resource pack: the Gillian is an 11-block-tall cloaked giant that spawns in open terrain, the Adjuchas is a six-limbed dune hunter, and the Vasto Lorde has a split mask, a horned crown, and blade-like arms. Aim at the creature's body rather than its decorative extremities: combat still uses the underlying mob's hitbox.
 
+### Spiritual pressure
+
+Every player has a reiatsu level. Rank gives 1–5: rank 5 is 1 and rank 1 is 5. A first-form release adds 2 and an advanced release adds 4, so a rank 1 player in Bankai is at 9. Pressure never slows, blinds or stuns players.
+
+- **Sensing:** when someone 2 or more levels above you is within 40 blocks, you feel it. A line like "A heavy reiatsu presses down on you, to the northeast" appears with a low hum, and it is more urgent the bigger the gap. Each person is felt at most every 90 seconds, but a sudden spike such as a Bankai release is felt immediately. Allies and friends, invisible or vanished players, spectators and the inner world are ignored.
+- **Suppression:** stay crouched for 3 seconds while unreleased to hide your reiatsu from sensing. This is useful for ambushes, at the cost of moving at sneaking speed.
+- **The fight edge:** once you are in a fight with someone 3 or more levels above you, you deal 10% less damage to them, and your technique and signature cooldowns are 15% longer. After 10 seconds you adapt, the edge fades over 5 seconds, and from then on it is an even fight. You get one chat line when it lands and one when you have adapted. It is worked out per opponent, so fighting several strong players at once does not stack it.
+
+Tune it under `pressure` in `config.yml`, or set `pressure.enabled: false` to turn it off.
+
 ### The Vasto Lorde
 
 The Vasto Lorde is the apex Hollow and a server-wide event, not a random spawn. Only one can exist at a time.

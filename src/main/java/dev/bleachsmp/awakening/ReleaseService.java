@@ -783,10 +783,11 @@ public final class ReleaseService implements Listener {
         int cooldown = setting(release.advanced,
                 secondary ? "secondary-technique-cooldown-seconds" : "technique-cooldown-seconds",
                 release.advanced ? (secondary ? 8 : 5) : (secondary ? 10 : 6), 0, 600);
+        long cooldownMillis = Math.round(cooldown * 1000L * service.pressure().cooldownFactor(player));
         if (secondary) {
-            release.secondReadyAt = now + cooldown * 1000L;
+            release.secondReadyAt = now + cooldownMillis;
         } else {
-            release.mainReadyAt = now + cooldown * 1000L;
+            release.mainReadyAt = now + cooldownMillis;
         }
         player.sendActionBar(Component.text(name + "!", release.form.text(), TextDecoration.BOLD));
     }

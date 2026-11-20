@@ -71,6 +71,23 @@ hueco-mundo:
     health-per-extra-player: 150
     damage: 14
 
+# Spiritual pressure. It mostly gives information, plus a small edge that fades, and never slows or blinds.
+# Level = 6 - rank (rank 5 = 1, rank 1 = 5), +2 in a first-form release, +4 in an advanced release.
+pressure:
+  enabled: true
+  # Players feel anyone at least sense-gap levels above them within sense-radius blocks.
+  sense-radius: 40
+  sense-gap: 2
+  sense-cooldown-seconds: 90
+  # Staying crouched, unreleased, for this long hides your reiatsu from sensing.
+  suppress-seconds: 3
+  # In a fight with someone edge-gap or more levels above you, you deal less damage to them and your
+  # technique and signature cooldowns are longer, until you adapt; then the edge fades over 5 seconds.
+  edge-gap: 3
+  damage-penalty: 0.10
+  cooldown-penalty: 0.15
+  adapt-seconds: 10
+
 awakenings:
   # Shikai and equivalent first forms never require rank. Lower rank numbers are stronger.
   advanced-unlock-rank: 2
