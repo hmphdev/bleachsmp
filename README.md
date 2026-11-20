@@ -56,6 +56,35 @@ Your first form unlocks automatically at 36 evidence **at any rank**. Advanced f
 | Artificer | Mining, building, crafting | Three expanding rings of erupting pillars |
 | Keeper | Blocking, farming, sharing potions | An eight-second sanctum: allies regenerate and resist, enemies are slowed and worn down |
 
+### Crisis awakening (first forms)
+
+Full playstyle evidence no longer unlocks a first form by itself. The form becomes **dormant** and only wakes when a
+true rival pushes the player to the brink in a real player fight. Mobs never count.
+
+A hidden breaking-point meter fills during a fight where both players are trading hits:
+
+| Moment | Meter |
+| --- | --- |
+| A rival takes you to 3 hearts or less | +20 |
+| Your rival has a form released and you don't | +25 |
+| Each extra attacker beyond one (2v1, 3v1…) | +15 |
+| Your rival outranks you | +15 |
+| You hit back while on 3 hearts or less | +10 per hit |
+| A friend or teammate dies near you mid-fight | +20 |
+
+When the meter is full (100), the blow that would kill you is cancelled. Instead the world slows, your faction's inner
+voice speaks, and after two seconds of invulnerability the form bursts out, releasing immediately at half health. The
+whole server hears that someone has awakened, but not who.
+
+Self-moderation, since nobody has to watch:
+- **Friends don't count.** Players who spend an hour near each other without fighting, or who have ever shared a team,
+  are friends until one of them really kills the other. Bonds are saved in `bonds.yml`.
+- **Real exchanges only.** The meter only grows while you are also hitting that rival, and drains quickly out of combat.
+- **No rematch farming.** A rival who pushed you hard in a fight that ended without an awakening stops counting for 7 days.
+- **No fresh alts.** Rivals need 2 hours of playtime.
+
+Everything is tunable under `awakenings.crisis`; set `enabled: false` to go back to unlocking on full evidence.
+
 ### First-form releases
 
 Every faction's first form is a 30-second release rather than a single move: Soul Reaper **Shikai**, Hollow **Resurrección**, Quincy **Schrift**, and **Awakened Fullbring**. The playstyle that unlocked the form decides which one awakens. Releasing calls out its command to nearby players, shows its name on screen, plays the faction's release animation and sounds, and bursts spiritual pressure that pushes nearby enemies back. A countdown boss bar and a coloured aura stay up while it is released.

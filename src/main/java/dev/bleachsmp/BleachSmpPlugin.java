@@ -67,6 +67,8 @@ public final class BleachSmpPlugin extends JavaPlugin {
         awakenings = new AwakeningService(this);
         getServer().getPluginManager().registerEvents(new PlaystyleListener(awakenings), this);
         getServer().getPluginManager().registerEvents(awakenings.releases(), this);
+        getServer().getPluginManager().registerEvents(awakenings.crisis(), this);
+        awakenings.crisis().start();
         huecoMundo = new HuecoMundoService(this);
         getServer().getPluginManager().registerEvents(huecoMundo, this);
         huecoMundo.initialize();
@@ -85,6 +87,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
     public void onDisable() {
         if (awakenings != null) {
             awakenings.releases().sealAll();
+            awakenings.crisis().shutdown();
         }
         savePlayerData();
         if (huecoMundo != null) {

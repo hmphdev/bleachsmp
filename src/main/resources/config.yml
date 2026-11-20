@@ -65,6 +65,25 @@ awakenings:
   advanced-unlock-rank: 2
   first-cooldown-seconds: 40
   advanced-cooldown-seconds: 95
+  # Crisis awakening: once a player's playstyle evidence is full, their first form is dormant. It only wakes when
+  # a real rival pushes them to the brink: a hidden meter fills during genuine player fights (low health, being
+  # outclassed, outnumbered or outranked, fighting back, an ally falling), and once it is full the blow that would
+  # kill them awakens the form instead. Players who spend friend-minutes near each other without fighting, or who
+  # have shared a team, are friends and cannot push each other's meter until one of them really kills the other.
+  # Set enabled: false to unlock first forms as soon as the evidence is full.
+  crisis:
+    enabled: true
+    meter-goal: 100
+    # Chance that a full meter turns the killing blow into an awakening.
+    trigger-chance: 1.0
+    # Health (in half-hearts) that counts as being on the brink.
+    low-health: 6.0
+    friend-radius: 32
+    friend-minutes: 60
+    # An opponent who pushed hard in a fight that ended without an awakening counts again after this long.
+    rematch-cooldown-days: 7
+    # Opponents with less total playtime than this never count (stops fresh alt accounts).
+    opponent-min-playtime-minutes: 120
   # First forms (Shikai, Resurrección, Schrift, Awakened Fullbring) are timed releases. While one is out,
   # the starter item's right-click uses the form's technique. first-cooldown-seconds starts when it seals.
   release:

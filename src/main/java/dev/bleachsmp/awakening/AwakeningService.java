@@ -23,6 +23,7 @@ public final class AwakeningService {
     private final BleachSmpPlugin plugin;
     private final AwakeningPowers powers;
     private final ReleaseService releases;
+    private final CrisisService crisis;
     private final NamespacedKey firstKey;
     private final NamespacedKey advancedKey;
     private final NamespacedKey firstTraitKey;
@@ -31,12 +32,14 @@ public final class AwakeningService {
     private final NamespacedKey visitsKey;
     private final NamespacedKey releaseReadyKey;
     private final NamespacedKey concealedUntilKey;
+    private final NamespacedKey dormantKey;
     private final NamespacedKey[] habitKeys = new NamespacedKey[Habit.values().length];
 
     public AwakeningService(BleachSmpPlugin plugin) {
         this.plugin = plugin;
         powers = new AwakeningPowers(this);
         releases = new ReleaseService(plugin, this);
+        crisis = new CrisisService(plugin, this);
         firstKey = new NamespacedKey(plugin, "first_awakening");
         advancedKey = new NamespacedKey(plugin, "advanced_awakening");
         firstTraitKey = new NamespacedKey(plugin, "first_awakening_trait");
@@ -45,6 +48,7 @@ public final class AwakeningService {
         visitsKey = new NamespacedKey(plugin, "awakening_visited_areas");
         releaseReadyKey = new NamespacedKey(plugin, "awakening_ready_at");
         concealedUntilKey = new NamespacedKey(plugin, "awakening_concealed_until");
+        dormantKey = new NamespacedKey(plugin, "awakening_dormant_notified");
         for (Habit habit : Habit.values()) {
             habitKeys[habit.ordinal()] = new NamespacedKey(plugin, "awakening_habit_" + habit.name().toLowerCase(Locale.ROOT));
         }
@@ -52,6 +56,20 @@ public final class AwakeningService {
 
     public ReleaseService releases() {
         return releases;
+    }
+
+    public CrisisService crisis() {
+        return crisis;
+    }
+
+    private boolean crisisEnabled() {
+        return plugin.getConfig().getBoolean("awakenings.crisis.enabled", true);
+    }
+
+    /** The first form is ready but sleeping: only a crisis in a real fight can wake it. */
+    boolean isDormant(Player player) {
+        return crisisEnabled() && canProgress(player) && faction(player) != null && unlocked(player, false) == null
+                && Playstyle.ready(evidence(player), false, plugin.getRank(player.getUniqueId()), requiredRank());
     }
 
     boolean canStrike(Player caster, LivingEntity target) {
@@ -136,6 +154,26 @@ public final class AwakeningService {
         if (!Playstyle.ready(evidence, advanced, plugin.getRank(player.getUniqueId()), requiredRank())) {
             return;
         }
+        if (!advanced && crisisEnabled()) {
+            // The first form never unlocks quietly: it waits for a crisis. Tell the player once.
+            var data = player.getPersistentDataContainer();
+            if (!data.has(dormantKey)) {
+                data.set(dormantKey, PersistentDataType.BYTE, (byte) 1);
+                player.sendMessage(Component.text("Your " + formName(faction(player), false)
+                        + " is ready, but it sleeps. It will only wake when a true rival pushes you to the brink.",
+                        NamedTextColor.DARK_AQUA, net.kyori.adventure.text.format.TextDecoration.ITALIC));
+            }
+            return;
+        }
+        Playstyle style = unlock(player, advanced, evidence);
+        player.sendMessage(Component.text("Awakening unlocked: " + formName(faction(player), advanced) + " — "
+                + powerName(player, faction(player), style, advanced) + "!", NamedTextColor.GOLD));
+        player.sendMessage(Component.text("Hold your faction starter item and press swap hands (F) to release it."
+                + (advanced ? " While it is out, F fires its ultimate and sneak + F seals it." : ""),
+                NamedTextColor.YELLOW));
+    }
+
+    private Playstyle unlock(Player player, boolean advanced, int[] evidence) {
         Playstyle style = Playstyle.dominant(evidence);
         Playstyle trait = Playstyle.secondary(evidence, style);
         var data = player.getPersistentDataContainer();
@@ -144,11 +182,36 @@ public final class AwakeningService {
             data.set(advanced ? advancedTraitKey : firstTraitKey, PersistentDataType.STRING, trait.name());
         }
         data.remove(evidenceKey);
-        player.sendMessage(Component.text("Awakening unlocked: " + formName(faction(player), advanced) + " — "
-                + powerName(player, faction(player), style, advanced) + "!", NamedTextColor.GOLD));
-        player.sendMessage(Component.text("Hold your faction starter item and press swap hands (F) to release it."
-                + (advanced ? " While it is out, F fires its ultimate and sneak + F seals it." : ""),
-                NamedTextColor.YELLOW));
+        data.remove(dormantKey);
+        return style;
+    }
+
+    /** Unlocks a dormant first form at the moment of crisis. */
+    boolean awakenFirst(Player player) {
+        if (!isDormant(player)) {
+            return false;
+        }
+        unlock(player, false, evidence(player));
+        return true;
+    }
+
+    /** Bursts straight into the newly awakened first form, ignoring the release cooldown. */
+    void releaseAwakened(Player player) {
+        Faction faction = faction(player);
+        Playstyle style = unlocked(player, false);
+        if (faction == null || style == null || !canPlay(player)) {
+            return;
+        }
+        Playstyle trait = storedStyle(player, firstTraitKey);
+        releases.release(player, faction, style, trait, false);
+        if (trait != null) {
+            AwakeningPowers.applyTrait(player, trait);
+        }
+        player.getPersistentDataContainer().set(releaseReadyKey, PersistentDataType.LONG,
+                System.currentTimeMillis() + (releases.durationSeconds(false) + releaseCooldown(false)) * 1000L);
+        player.sendMessage(Component.text("Your " + formName(faction, false) + " has awakened: "
+                + powerName(player, faction, style, false) + "! From now on, hold your starter item and press F to release it.",
+                NamedTextColor.GOLD));
     }
 
     public void showProgress(Player player) {
@@ -162,6 +225,10 @@ public final class AwakeningService {
         Playstyle advanced = unlocked(player, true);
         player.sendMessage(Component.text("Awakenings — " + faction.displayName(), faction.color()));
         showForm(player, faction, first, false);
+        if (first == null && isDormant(player)) {
+            player.sendMessage(Component.text("Your " + formName(faction, false)
+                    + " is dormant. Only a true rival pushing you to the brink can wake it.", NamedTextColor.DARK_AQUA));
+        }
         showForm(player, faction, advanced, true);
         if (advanced == null) {
             int progress = Playstyle.total(evidence(player));
