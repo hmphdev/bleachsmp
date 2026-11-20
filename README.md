@@ -62,16 +62,80 @@ The same resource pack carries the ability effects. For players with it, the sha
 - **Shockwaves** are rings of light racing across the ground. **Bursts** are star flashes, and big ones swell an orb of energy.
 - **Lines and tethers** become beams of light. Projectiles and dashes leave glowing streaks.
 
-Releases and advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) also get their own effects:
+Every kit (all 66 zanpakutō, resurrecciones, Schriften and Fullbrings) has its own look, built from about 30 effect shapes in the pack. These include ice crystals, stone spikes, lightning, gusts, smoke, breaking waves, drops, petals, feathers, blades, Heilig Pfeil arrows, spears, chains, bone fangs, claws, beast heads, armoured fists, a giant, Hollow masks, tentacles, and glyphs such as hearts, notes, eyes, stars, butterflies, invaders, cards, clocks, the Quincy pentacle, Orihime's triangle, hex barriers and pages.
 
-- **First release:** Soul Reapers rise in a spiral inside a column of reiatsu. Hollows burn in soul-fire under a dark column. Quincy are ringed by six shafts of light. Fullbringers spin rings of power around their focus.
-- **Advanced entrance:** a jagged bolt strikes from the sky and a ten-block pillar of reiatsu rises around the user, spinning. Soul Reapers and Hollows get a dark core inside it. Then come a double shockwave and a scorched, cracked crater that lingers for ten seconds.
-- **Advanced aura:** Quincy grow two flapping wings of light, Hollows grow bone horns and smoulder with soul-fire, Fullbringers are circled by four glowing armour plates, and Soul Reapers burn with black-and-colour reiatsu flames. Every released form also wears a faint, turning sheath of reiatsu.
-- **Ultimates:** lightning storms strike as real bolts that leave scorch marks. The tempest is a funnel of spinning wind bands. World Breaker cracks the ground and sends shockwaves out with each ring of pillars. Sanctum raises a dome of light with turning rings.
+- **First release:** each kit releases its own way.
+  - Hyōrinmaru's ice dragon swims a circle around its owner.
+  - Senbonzakura's blade dissolves into petals.
+  - Tenken's armoured fist slams down.
+  - Hollows' masks form and shatter.
+  - Quincy stand on a glowing pentacle under a halo.
+  - Fullbringers' armour plates fly in and lock on.
+- **Advanced entrance:** a bolt strikes from the sky, then the kit's own entrance plays. Some examples:
+  - Tensa Zangetsu's black-and-crimson column is cut in an X.
+  - Zanka no Tachi's ring of fire collapses into a white-hot blade.
+  - Daiguren Hyōrinmaru rises with ice wings and three ice flowers.
+  - Senbonzakura Kageyoshi raises two rows of giant blades that scatter into a petal storm.
+  - Sōō Zabimaru's bone serpent coils up its master.
+  - Kokujō Tengen Myō'ō's armoured giant rises out of the earth.
+  - Murciélago's black wings unfurl over black rain and a green lance.
+  - Santa Teresa's six scythe arms fan out.
+  - Hoheitsrecht brings golden wings, a sword and a shield.
+  - Jackpot Knuckle's slot reels spin.
+  - Shiten Kōshun raises a dome inside a triangle of light.
+  - Time Tells No Lies hangs a giant clock with chains.
+- **Elements:** each element has its own shapes on every hit, release and aura:
+  - fire burns in tongues of flame;
+  - ice bursts into crystals;
+  - lightning crackles;
+  - wind whirls;
+  - shadow billows into smoke;
+  - water splashes and rolls in waves;
+  - blood sprays;
+  - petals and leaves flutter;
+  - earth throws up spikes and rocks;
+  - light leaves stars and a pentacle;
+  - poison clouds;
+  - sound rings with notes.
+- **Techniques:** waves, beams, blinks, dashes, slams, wards, combos, storms, pillars and chains take the kit's look. Some examples:
+  - Getsuga Tenshō is a black crescent with a burning edge.
+  - Hyōryū's ice dragon flies down the beam.
+  - Heilig Pfeil fire as arrows, and Licht Regen rains them.
+  - Ola Azul rolls as a wave.
+  - Koten Zanshun throws a spinning triangle.
+  - Danku is a hex wall, and Santen Kesshun is a triangle shield.
+  - Pantera's combo rakes with claws.
+  - Golondrina's storm rains feathers.
+- **Signature (Q) and advanced (F) abilities:** every one has its own choreography. Some examples:
+  - Getsuga Jūjishō flies as a cross.
+  - Jōkaku Enjō is a ring of fire walls.
+  - Hyōten Hyakkasō opens the sky over a field of ice flowers.
+  - Senkei walls everyone in with swords.
+  - Korose's sixty-block thrust leaves a sliver that dissolves its target three seconds later.
+  - Hikotsu Taihō fires from the serpent's jaws.
+  - Myō'ō's giant stands beside its master for the rest of the release.
+  - Jakuhō Raikōben's missile flies to its mark and goes off.
+  - Lanza del Relámpago leaves a towering green explosion.
+  - Gremmy imagines a meteor.
+  - Sprenger pins five Seele Schneider in a pentacle.
+  - The Jail closes bars of light.
+  - La Muerte fires a skull.
+  - Time Limit spins a giant clock.
+- **Advanced aura:** these effects stay with the form while it is out:
+  - Quincy wear wings of light, Hollows grow horns, and Fullbringers are circled by armour plates.
+  - Some kits add their own: ice wings, black wings, six arms, petals, cards, pages, invaders, eyes or Rikka's six flowers.
+  - Every released form also wears a faint, turning sheath of reiatsu that grows with its owner.
 
-Effects are tinted to each form's colour, glow at full brightness, and fade out smoothly. Players without the pack see the original particles, and pack users don't see doubled particles. Effects are short-lived display entities that are never saved, and at most 700 exist at once.
+Effects are tinted to each form's colour, glow at full brightness and fade out smoothly. Players without the pack see the original particles. Pack users see vanilla particles thinned to a quarter, so the models aren't buried. Effects are short-lived display entities that are never saved, and at most 1200 exist at once. Lingering effects end as soon as their release does.
 
-Admins can preview any form's effects without unlocking it, using `/bleach vfx release <first|advanced> [faction] [playstyle]`, `/bleach vfx use <main|second|ultimate>`, `/bleach vfx seal`, and `/bleach vfx demo` (every base effect in a row). `.github/scripts/vfx-screenshot.py` uses these to photograph each faction's advanced release in the real client.
+Admins can preview any kit without unlocking it:
+
+- `/bleach vfx release <first|advanced> [faction] [playstyle] [kit]` releases a form. `kit` is a name (spaces as underscores) or its number in the playstyle's pool.
+- `/bleach vfx use <main|second|signature|ultimate>` fires an ability.
+- `/bleach vfx seal` seals the form.
+- `/bleach vfx demo` plays every base effect in a row.
+
+`.github/scripts/vfx-screenshot.py` uses these commands to photograph each faction in the real client. `.github/scripts/kit-screenshot.py faction:playstyle:index ...` photographs individual kits.
 
 ### Garganta tears
 

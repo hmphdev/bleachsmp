@@ -27,7 +27,7 @@ import org.joml.Vector3f;
  * ({@link Effect}); everyone else sees the same shapes drawn in particles.
  */
 public final class Vfx {
-    private static final int MAX_EFFECTS = 700;
+    private static final int MAX_EFFECTS = 1200;
     private static final double VIEW_SQUARED = 96 * 96;
 
     private static Plugin plugin;
@@ -95,9 +95,8 @@ public final class Vfx {
             entity.setVisibleByDefault(false);
             entity.setViewRange(2);
             entity.setShadowRadius(0);
-            if (kind.glows) {
-                entity.setBrightness(new Display.Brightness(15, 15));
-            }
+            // Energy glows; solid props (rock, bone, armour) stay readable in the dark without glowing.
+            entity.setBrightness(kind.glows ? new Display.Brightness(15, 15) : new Display.Brightness(11, 15));
         });
         for (Player player : spot.getWorld().getPlayers()) {
             if (packs.hasPack(player) && player.getLocation().distanceSquared(spot) < VIEW_SQUARED) {
@@ -153,6 +152,39 @@ public final class Vfx {
         for (Player player : at.getWorld().getPlayers()) {
             if ((!models || !packs.hasPack(player)) && player.getLocation().distanceSquared(at) < VIEW_SQUARED) {
                 spawn.accept(player);
+            }
+        }
+    }
+
+    /**
+     * Particles seen by everyone, but thinned out to a quarter for players who also see effect models, so the
+     * models are not buried under them.
+     */
+    public static <T> void particle(Particle particle, Location at, int count, double dx, double dy, double dz,
+            double speed, T data) {
+        boolean models = packs != null && packs.enabled() && plugin != null;
+        for (Player player : at.getWorld().getPlayers()) {
+            if (player.getLocation().distanceSquared(at) >= VIEW_SQUARED) {
+                continue;
+            }
+            int n = count;
+            if (models && packs.hasPack(player)) {
+                n = count / 4 + (Math.random() < (count % 4) / 4.0 ? 1 : 0);
+            }
+            if (n > 0) {
+                player.spawnParticle(particle, at, n, dx, dy, dz, speed, data);
+            }
+        }
+    }
+
+    /** Hides a stand-in entity (block-display shapes, say) from players who see an effect model in its place. */
+    public static void hideFromModelViewers(Entity entity) {
+        if (packs == null || !packs.enabled() || plugin == null) {
+            return;
+        }
+        for (Player player : entity.getWorld().getPlayers()) {
+            if (packs.hasPack(player)) {
+                player.hideEntity(plugin, entity);
             }
         }
     }
@@ -229,8 +261,7 @@ public final class Vfx {
 
     /** A flash of light with a spray of sparks; big bursts also swell an orb of energy. */
     public static void burst(Location at, Color color, int count, double spread, float size) {
-        at.getWorld().spawnParticle(Particle.DUST, at, Math.max(1, count / (modelsVisible(at) ? 3 : 1)), spread,
-                spread, spread, 0, dust(color, size));
+        particle(Particle.DUST, at, Math.max(1, count), spread, spread, spread, 0, dust(color, size));
         double flash = .7 + spread * 2.2 + size * .25;
         model(VfxKind.FLARE, at, color)
                 .pose(new Quaternionf(), scale(flash * .4))
@@ -273,15 +304,8 @@ public final class Vfx {
      * Called every tick along a path, the fading crescents leave a trail behind the travelling one.
      */
     public static void arc(Location center, Vector forward, double radius, Color color, float size, double yOffset) {
+        arcParticles(center, forward, radius, color, size, yOffset);
         Vector dir = forward.clone().normalize();
-        Vector side = dir.getCrossProduct(new Vector(0, 1, 0));
-        side = side.lengthSquared() < 0.01 ? new Vector(1, 0, 0) : side.normalize();
-        for (int i = -9; i <= 9; i++) {
-            double t = i * Math.toRadians(8);
-            Location point = center.clone().add(side.clone().multiply(Math.sin(t) * radius))
-                    .subtract(dir.clone().multiply((1 - Math.cos(t)) * radius * 0.6)).add(0, yOffset, 0);
-            dustFor(point, color, Math.abs(i) < 6 ? size : size * 0.7f, 1, 0.02);
-        }
         // Slashes cut on a diagonal, which reads from any height; one path always leans the same way.
         long seed = Math.round(dir.getX() * 50) * 31 + Math.round(dir.getZ() * 50);
         float lean = (float) Math.toRadians(seed % 2 == 0 ? 24 : -24);
@@ -291,6 +315,20 @@ public final class Vfx {
                 .pose(aim, scale(radius * .8, thick, radius * .8))
                 .grow(1, 3, scale(radius * 1.08, thick, radius * 1.15))
                 .life(6, 4);
+    }
+
+    /** Only the particle half of {@link #arc}, for players without the resource pack. */
+    public static void arcParticles(Location center, Vector forward, double radius, Color color, float size,
+            double yOffset) {
+        Vector dir = forward.clone().normalize();
+        Vector side = dir.getCrossProduct(new Vector(0, 1, 0));
+        side = side.lengthSquared() < 0.01 ? new Vector(1, 0, 0) : side.normalize();
+        for (int i = -9; i <= 9; i++) {
+            double t = i * Math.toRadians(8);
+            Location point = center.clone().add(side.clone().multiply(Math.sin(t) * radius))
+                    .subtract(dir.clone().multiply((1 - Math.cos(t)) * radius * 0.6)).add(0, yOffset, 0);
+            dustFor(point, color, Math.abs(i) < 6 ? size : size * 0.7f, 1, 0.02);
+        }
     }
 
     /** A rising multi-strand helix around an entity. */
@@ -447,5 +485,209 @@ public final class Vfx {
                 .to(ticks / 2 + 1, ticks / 2, new Vector3f(0, (float) height * .6f, 0), new Quaternionf(),
                         scale(height * .3, height * .6, height * .3))
                 .life(ticks + 1, ticks / 2);
+    }
+
+    // ------------------------------------------------------------------ shaped effects
+
+    private static double rand(double spread) {
+        return (Math.random() * 2 - 1) * spread;
+    }
+
+    /** A model that flies from {@code from} to {@code to} over {@code ticks}, facing its travel, then fades. */
+    public static Effect fly(VfxKind kind, Location from, Location to, Color color, Vector3f size, int ticks, int linger) {
+        Vector span = to.toVector().subtract(from.toVector());
+        // Camera-facing glyphs stay upright; everything else points along its flight.
+        Quaternionf aim = kind.billboard == Display.Billboard.FIXED ? facing(span) : new Quaternionf();
+        return model(kind, from, color)
+                .pose(new Vector3f(), aim, size)
+                .to(1, Math.max(1, ticks), span.toVector3f(), aim, size)
+                .life(ticks + linger + 1, Math.max(2, linger));
+    }
+
+    /** Models launched from {@code at} in every direction, arcing out and falling: debris, drops, embers. */
+    public static void scatter(VfxKind kind, Location at, Color color, int count, double speed, double size, int ticks) {
+        for (int i = 0; i < count; i++) {
+            Vector out = new Vector(rand(1), Math.random() * .8 + .2, rand(1)).normalize().multiply(speed);
+            Quaternionf spin = new Quaternionf().rotateXYZ((float) rand(3), (float) rand(3), (float) rand(3));
+            Vector3f mid = out.toVector3f().mul(.6f).add(0, (float) speed * .35f, 0);
+            Vector3f end = out.toVector3f().add(0, (float) -speed * .5f, 0);
+            Vector3f scale = scale(size * (.6 + Math.random() * .6));
+            model(kind, at, color)
+                    .pose(new Vector3f(), spin, scale)
+                    .to(1, ticks / 2, mid, new Quaternionf(spin).rotateX(1.5f), scale)
+                    .to(ticks / 2 + 1, ticks / 2, end, new Quaternionf(spin).rotateX(3f).rotateY(1f), scale)
+                    .life(ticks + 2, Math.max(3, ticks / 3));
+        }
+    }
+
+    /**
+     * Crystals, spikes or blades bursting up out of the ground in a ring, leaning outward, then sinking back.
+     * {@code kind} is usually {@link VfxKind#SHARD}, {@link VfxKind#SPIKE} or {@link VfxKind#BLADE}.
+     */
+    public static void erupt(VfxKind kind, Location ground, Color color, int count, double radius, double height,
+            int ticks) {
+        for (int i = 0; i < count; i++) {
+            double a = i * Math.PI * 2 / count + rand(.25);
+            double r = radius * (count > 1 ? .75 + Math.random() * .4 : 0);
+            Location at = ground.clone().add(Math.cos(a) * r, -.1, Math.sin(a) * r);
+            float lean = (float) (count > 1 ? .25 + Math.random() * .3 : rand(.15));
+            Quaternionf tilt = new Quaternionf().rotateY((float) -a).rotateX(0).rotateZ(-lean);
+            double h = height * (.7 + Math.random() * .5);
+            double w = Math.max(.6, h * .45);
+            int rise = 2 + (int) (Math.random() * 3);
+            model(kind, at, color)
+                    .pose(new Vector3f(), tilt, scale(w * .4, .05, w * .4))
+                    .to(1 + i % 3, rise, tilt, scale(w, h, w))
+                    .to(ticks - 6, 6, new Vector3f(0, (float) -h * .6f, 0), tilt, scale(w * .8, h * .5, w * .8))
+                    .life(ticks + 1, 6);
+        }
+    }
+
+    /** One crystal, spike or blade thrusting out of the ground at a point. */
+    public static void spike(VfxKind kind, Location ground, Color color, double height, int ticks) {
+        erupt(kind, ground, color, 1, 0, height, ticks);
+    }
+
+    /** Jagged lightning between two points, re-forking each call. */
+    public static void zap(Location from, Location to, Color color, double width) {
+        Vector span = to.toVector().subtract(from.toVector());
+        double length = span.length();
+        if (length < .05) {
+            return;
+        }
+        fallbackLine(from, to, color, (float) (.6 + width), .4);
+        int pieces = Math.max(1, (int) Math.ceil(length / 2.5));
+        Location point = from.clone();
+        for (int i = 1; i <= pieces; i++) {
+            Location next = i == pieces ? to.clone()
+                    : from.clone().add(span.clone().multiply(i / (double) pieces)).add(rand(.5), rand(.5), rand(.5));
+            Vector step = next.toVector().subtract(point.toVector());
+            Quaternionf aim = facing(step).rotateZ((float) rand(Math.PI));
+            double w = width * (2.5 + Math.random());
+            model(VfxKind.ZAP, point, color)
+                    .pose(aim, scale(w, w, step.length()))
+                    .to(2, 3, aim, scale(w * .4, w * .4, step.length()))
+                    .life(5, 3);
+            point = next;
+        }
+    }
+
+    /** A spinning gust of wind, a sweep of air facing {@code forward}. */
+    public static void gust(Location at, Vector forward, Color color, double size, int ticks) {
+        Quaternionf aim = facing(forward.clone().setY(forward.getY() * .3)).rotateZ((float) rand(.5));
+        model(VfxKind.GUST, at, color)
+                .pose(aim, scale(size * .5, 1, size * .5))
+                .to(1, ticks, new Vector3f(forward.toVector3f()).normalize().mul((float) size * .6f),
+                        new Quaternionf(aim).rotateY((float) rand(1.2)), scale(size * 1.3, 1, size * 1.3))
+                .life(ticks + 1, Math.max(3, ticks / 2));
+    }
+
+    /** A swirl of gusts turning about a vertical axis, for whirlwinds. */
+    public static void whirl(Location at, Color color, double radius, int ticks) {
+        for (int i = 0; i < 3; i++) {
+            float turn = (float) (i * Math.PI * 2 / 3);
+            Location spot = at.clone().add(0, i * .5, 0);
+            model(VfxKind.GUST, spot, color)
+                    .pose(new Quaternionf().rotateY(turn), scale(radius * .6, 1, radius * .6))
+                    .to(1, ticks, new Quaternionf().rotateY(turn + 4f), scale(radius * 1.4, 1, radius * 1.4))
+                    .life(ticks + 1, Math.max(3, ticks / 2));
+        }
+    }
+
+    /** Billowing puffs of smoke, ash, gas or mist that swell and drift up. */
+    public static void smoke(Location at, Color color, int count, double radius, double size, int ticks) {
+        for (int i = 0; i < count; i++) {
+            Location spot = at.clone().add(rand(radius), rand(radius * .4), rand(radius));
+            Quaternionf spin = new Quaternionf().rotateXYZ((float) rand(3), (float) rand(3), (float) rand(3));
+            double s = size * (.7 + Math.random() * .6);
+            model(VfxKind.SMOKE, spot, color)
+                    .pose(new Vector3f(), spin, scale(s * .4))
+                    .to(1, ticks, new Vector3f((float) rand(.4), (float) (.3 + Math.random() * .7), (float) rand(.4)),
+                            new Quaternionf(spin).rotateY(1.2f), scale(s * 1.3))
+                    .life(ticks + 1, Math.max(4, ticks / 2));
+        }
+    }
+
+    /** A crest of water rolling forward {@code distance} blocks. */
+    public static void wave(Location at, Vector forward, Color color, double width, double height, double distance,
+            int ticks) {
+        Vector dir = forward.clone().setY(0);
+        if (dir.lengthSquared() < 1e-4) {
+            dir = new Vector(0, 0, 1);
+        }
+        dir.normalize();
+        Quaternionf aim = facing(dir);
+        model(VfxKind.WAVE, at, color)
+                .pose(new Vector3f(), aim, scale(width * .7, height * .3, height * .6))
+                .to(1, ticks, dir.clone().multiply(distance).toVector3f(), aim, scale(width, height, height))
+                .life(ticks + 3, 5);
+    }
+
+    /** Drops flung out from {@code at}: water, blood or venom. */
+    public static void drops(Location at, Color color, int count, double speed, int ticks) {
+        scatter(VfxKind.DROP, at, color, count, speed, 1.2, ticks);
+    }
+
+    /** Petals or leaves fluttering out and around from {@code at}. */
+    public static void petals(Location at, Color color, int count, double radius, int ticks) {
+        for (int i = 0; i < count; i++) {
+            double a = Math.random() * Math.PI * 2;
+            double r = radius * (.3 + Math.random() * .7);
+            Vector3f end = new Vector3f((float) (Math.cos(a) * r), (float) rand(radius * .5), (float) (Math.sin(a) * r));
+            Vector3f mid = new Vector3f(end).mul(.5f).add((float) rand(.5), (float) (.3 + Math.random() * .5), (float) rand(.5));
+            Quaternionf spin = new Quaternionf().rotateXYZ((float) rand(3), (float) rand(3), (float) rand(3));
+            Vector3f size = scale(.7 + Math.random() * .6);
+            model(VfxKind.PETAL, at, color)
+                    .pose(new Vector3f(), spin, size)
+                    .to(1, ticks / 2, mid, new Quaternionf(spin).rotateX(2.5f).rotateZ(1.5f), size)
+                    .to(ticks / 2 + 1, ticks / 2, end, new Quaternionf(spin).rotateX(5f).rotateY(2f), size)
+                    .life(ticks + 2, Math.max(4, ticks / 3));
+        }
+    }
+
+    /** A glyph (heart, note, eye, star, butterfly, ...) that pops into view, drifts up and fades. */
+    public static Effect glyph(VfxKind kind, Location at, Color color, double size, int ticks) {
+        return model(kind, at, color)
+                .pose(new Vector3f(), new Quaternionf(), scale(size * .3))
+                .to(1, 3, new Vector3f(), new Quaternionf(), scale(size * 1.15))
+                .to(4, 3, new Vector3f(0, .1f, 0), new Quaternionf(), scale(size))
+                .to(7, Math.max(1, ticks - 7), new Vector3f(0, (float) size * .6f, 0), new Quaternionf(), scale(size * .9))
+                .life(ticks, Math.max(3, ticks / 3));
+    }
+
+    /** A sigil drawn flat on the ground, turning slowly. */
+    public static Effect sigil(VfxKind kind, Location ground, Color color, double radius, int ticks) {
+        float turn = (float) (Math.random() * 6);
+        return model(kind, ground.clone().add(0, .06, 0), color)
+                .pose(new Quaternionf().rotateY(turn), scale(radius * .2, 1, radius * .2))
+                .to(1, 5, new Quaternionf().rotateY(turn + .6f), scale(radius * 2.1, 1, radius * 2.1))
+                .to(6, Math.max(1, ticks - 6), new Quaternionf().rotateY(turn + 3f), scale(radius * 2, 1, radius * 2))
+                .life(ticks, Math.max(4, ticks / 4));
+    }
+
+    /**
+     * Keeps {@code count} models circling an entity, called every tick or two from an aura. Each lives a few
+     * ticks past the last call, so they vanish when the aura stops.
+     */
+    public static void orbit(String key, Entity around, VfxKind kind, Color color, int count, double radius,
+            double height, double size, double angle, boolean faceOut) {
+        for (int i = 0; i < count; i++) {
+            double a = angle + i * Math.PI * 2 / count;
+            Vector offset = new Vector(Math.cos(a) * radius, height + Math.sin(angle * 1.7 + i) * .15, Math.sin(a) * radius);
+            Quaternionf pose = faceOut ? facing(new Vector(Math.cos(a), 0, Math.sin(a)))
+                    : new Quaternionf().rotateY((float) -a).rotateX((float) (angle * 2 + i));
+            Vector3f scale = scale(size);
+            keep(key + ":" + i, 6, () -> model(kind, around.getLocation().add(offset), color)
+                    .follow(around, offset).pose(pose, scale))
+                    .offset(offset).move(2, new Vector3f(), pose, scale);
+        }
+    }
+
+    /** A model that appears at a fixed spot, swells in and fades, with an optional slow turn. */
+    public static Effect flash(VfxKind kind, Location at, Color color, Quaternionf rotation, Vector3f size, int ticks) {
+        return model(kind, at, color)
+                .pose(new Vector3f(), rotation, new Vector3f(size).mul(.4f))
+                .to(1, 3, new Vector3f(), rotation, size)
+                .life(ticks, Math.max(3, ticks / 2));
     }
 }

@@ -144,6 +144,15 @@ public final class SignatureService implements Listener {
         use(player, release);
     }
 
+    /** Fires the signature as if Q were pressed, for the admin effect preview. */
+    void preview(Player player) {
+        Release release = releases.get(player);
+        if (release != null) {
+            release.signatureReadyAt = 0;
+            use(player, release);
+        }
+    }
+
     private void use(Player player, Release release) {
         UUID id = player.getUniqueId();
         long now = System.currentTimeMillis();
@@ -170,6 +179,7 @@ public final class SignatureService implements Listener {
         if (!cast(cast)) {
             return;
         }
+        MoveFx.signature(player, release);
         int cooldown = Math.clamp(plugin.getConfig().getInt("awakenings." + (release.advanced ? "advanced-release" : "release")
                 + ".signature-cooldown-seconds", release.advanced ? 14 : 20), 0, 600);
         release.signatureReadyAt = now + Math.round(cooldown * 1000L * service.pressure().cooldownFactor(player));
