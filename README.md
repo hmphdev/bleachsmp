@@ -38,7 +38,7 @@ Other future work includes additional boss encounters, death recovery, the Rank 
 
 After choosing a faction, play in Survival or Adventure to build evidence from what you actually do. Melee, sprinting into fights, sneaking, landed projectiles, shield blocks, exploring new areas, mining, building, crafting, enchanting, harvesting, breeding, fishing, sharing beneficial potions, and boss rewards all count. Habits contribute different amounts toward different styles. Most habits have a short scoring cooldown, and no single habit gives enough evidence to unlock a form on its own.
 
-Your first form unlocks automatically at 36 evidence **at any rank**. Advanced forms need 80 fresh evidence and **Rank 2 or better** by default. Each form locks in the style that best matches the habits you showed in that stage. A strong secondary habit can also add a short bonus to the release. For example, a sneaking enchanter who also mines can unlock the Mirage Shikai with a Haste bonus, then earn a Vanguard Bankai by fighting more aggressively. Progress, unlocked forms, and release cooldowns persist across restarts.
+Your first form becomes dormant at 36 evidence **at any rank**. The advanced-form quest begins at 80 fresh evidence and **Rank 2 or better** by default. Each form is based on the habits you showed while earning it. A strong secondary habit can also add a short bonus to the release. For example, a sneaking enchanter who also mines can unlock the Mirage Shikai with a Haste bonus, then earn a Vanguard Bankai by fighting more aggressively. Progress, unlocked forms, and release cooldowns persist across restarts.
 
 | Faction | First form | Advanced form |
 | --- | --- | --- |
@@ -83,7 +83,15 @@ Self-moderation, since nobody has to watch:
 - **No rematch farming.** A rival who pushed you hard in a fight that ended without an awakening stops counting for 7 days.
 - **No fresh alts.** Rivals need 2 hours of playtime.
 
-Everything is tunable under `awakenings.crisis`; set `enabled: false` to go back to unlocking on full evidence.
+Everything is tunable under `awakenings.crisis`; set `enabled: false` to unlock first forms on full evidence.
+
+### Bankai awakening (advanced forms)
+
+1. **Mastery.** Once you meet the advanced evidence and rank requirements, land 40 first-form technique hits on valid rivals and win 5 fights while your first form is released. Only one hit per rival per second and one win per rival per 24 hours count. Friendship, minimum playtime, and rematch rules still apply.
+2. **Subjugation.** With your form sealed, hold your faction starter and sneak without moving for 30 seconds. You must be alone within 24 blocks and out of PvP for 15 seconds. In the inner world, beat your spirit within five minutes by dodging telegraphed attacks from your future advanced kit. A loss (including disconnecting) returns you with two hearts, keeps your gear, and starts a 24-hour trial cooldown. A win locks in the kit and makes the advanced form dormant.
+3. **Crisis.** While you still meet the rank requirement, face a valid rival who has a form released. Unreleased opponents don't build your meter. A first-form rival grants 10 outclassed points; an advanced-form rival grants 25. If a released rival lands an otherwise lethal blow with your meter full (200 by default), you awaken instead. Your form releases immediately and the whole server hears who awakened.
+
+`/bleach awakenings` shows the current stage. Set `awakenings.bankai.enabled: false` to restore advanced unlocks on evidence and rank alone. Existing advanced forms are unaffected. Operators with `bleachsmp.admin` can use `/bleach bankai <online player> stage <NONE|MASTERING|MASTERED|SUBJUGATED>`, `/bleach bankai <online player> trial`, or `/bleach bankai <online player> reset` to test progression without grinding.
 
 ### Signature moves
 
