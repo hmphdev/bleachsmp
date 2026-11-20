@@ -355,6 +355,10 @@ public final class ReleaseService implements Listener {
         return form(faction, style, variant(id, style, advanced), advanced);
     }
 
+    static Element element(UUID id, Faction faction, Playstyle style, boolean advanced) {
+        return Element.of(faction, style, variant(id, style, advanced));
+    }
+
     static Mechanic primary(UUID id, Playstyle style, boolean advanced) {
         return Mechanic.of(style, variant(id, style, advanced));
     }
@@ -379,7 +383,8 @@ public final class ReleaseService implements Listener {
         Mechanic second = secondary(id, style, trait, advanced);
         String text = "\"" + form.callout() + "\" A timed release. Right-click: " + techniqueName(faction, main) + " — "
                 + main.description + ". Sneak + right-click: " + techniqueName(faction, second) + " — "
-                + second.description + ". " + Theme.of(faction).onHit;
+                + second.description + ". " + Theme.of(faction).onHit + " Element: " + element(id, faction, style, advanced).label
+                + " — it " + element(id, faction, style, advanced).effect + ".";
         if (advanced) {
             text += " Techniques hit harder. F (once per release): " + ultimateName(faction, style) + " — "
                     + ultimateDescription(style) + ". Sneak + F seals.";
@@ -396,6 +401,7 @@ public final class ReleaseService implements Listener {
         final double power;
         final Form form;
         final Theme theme;
+        final Element element;
         final Mechanic main;
         final Mechanic second;
         final long startedAt;
@@ -405,15 +411,18 @@ public final class ReleaseService implements Listener {
         long mainReadyAt;
         long secondReadyAt;
         boolean ultimateUsed;
+        long nextImpactSoundAt;
+        long nextHazardAt;
 
-        Release(Faction faction, Playstyle style, boolean advanced, double power, Form form, Mechanic main,
-                Mechanic second, long startedAt, long endsAt, BossBar bar) {
+        Release(Faction faction, Playstyle style, boolean advanced, double power, Form form, Element element,
+                Mechanic main, Mechanic second, long startedAt, long endsAt, BossBar bar) {
             this.faction = faction;
             this.style = style;
             this.advanced = advanced;
             this.power = power;
             this.form = form;
             this.theme = Theme.of(faction);
+            this.element = element;
             this.main = main;
             this.second = second;
             this.startedAt = startedAt;
@@ -470,7 +479,8 @@ public final class ReleaseService implements Listener {
         String tier = AwakeningService.formName(faction, advanced);
         BossBar bar = BossBar.bossBar(Component.text(tier + " — " + form.name(), form.text(), TextDecoration.BOLD),
                 1.0f, form.bar(), advanced ? BossBar.Overlay.NOTCHED_20 : BossBar.Overlay.NOTCHED_10);
-        Release release = new Release(faction, style, advanced, power, form, primary(id, style, advanced),
+        Element element = element(id, faction, style, advanced);
+        Release release = new Release(faction, style, advanced, power, form, element, primary(id, style, advanced),
                 secondary(id, style, trait, advanced), now, now + seconds * 1000L, bar);
         active.put(id, release);
 
@@ -506,6 +516,13 @@ public final class ReleaseService implements Listener {
             }
             releaseAnimation(player, form, theme);
         }
+
+        // The element erupts as the release completes: after the faction animation, or at the peak of the entrance.
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline() && active.get(id) == release) {
+                element.eruption(player.getLocation(), advanced);
+            }
+        }, 20L);
 
         release.task = new BukkitRunnable() {
             int tick;
@@ -642,6 +659,7 @@ public final class ReleaseService implements Listener {
     private static void aura(Player player, Release release, int tick) {
         Location base = player.getLocation();
         var world = base.getWorld();
+        release.element.aura(base, tick, release.advanced);
         for (int i = 0; i < 2; i++) {
             double a = tick * 0.35 + i * Math.PI;
             world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 0.75,
@@ -737,6 +755,7 @@ public final class ReleaseService implements Listener {
         if (!used) {
             return;
         }
+        release.element.castSound(player.getLocation(), release.advanced);
         int cooldown = setting(release.advanced,
                 secondary ? "secondary-technique-cooldown-seconds" : "technique-cooldown-seconds",
                 release.advanced ? (secondary ? 8 : 5) : (secondary ? 10 : 6), 0, 600);
@@ -752,8 +771,18 @@ public final class ReleaseService implements Listener {
     private void hit(Player caster, LivingEntity target, double amount, Release release) {
         target.damage(damage(amount) * release.power, caster);
         Location at = target.getLocation().add(0, target.getHeight() / 2, 0);
-        at.getWorld().spawnParticle(release.theme.accent, at, 8, 0.3, 0.3, 0.3, 0.05);
+        accent(release, at, 8, 0.3, 0.3, 0.3, 0.05);
         Vfx.burst(at, release.form.color(), 8, 0.3, 1.2f);
+        release.element.burst(at, release.advanced ? 1.4 : 1.0);
+        release.element.onHit(caster, target);
+        long now = System.currentTimeMillis();
+        if (now >= release.nextImpactSoundAt) {
+            release.nextImpactSoundAt = now + 120;
+            release.element.impactSound(at);
+        }
+        if (release.advanced) {
+            hazard(caster, release, target.getLocation(), now);
+        }
         switch (release.theme) {
             case SOUL_REAPER -> target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 0));
             case HOLLOW -> {
@@ -764,6 +793,46 @@ public final class ReleaseService implements Listener {
             case QUINCY -> target.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 100, 0));
             case FULLBRINGER -> target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 60, 0));
         }
+    }
+
+    /** The faction's accent particle with the form's element layered over it. */
+    private static void accent(Release release, Location at, int count, double dx, double dy, double dz, double speed) {
+        at.getWorld().spawnParticle(release.theme.accent, at, Math.max(1, (count + 1) / 2), dx, dy, dz, speed);
+        release.element.layer(at, count, dx, dy, dz, speed);
+    }
+
+    /** Advanced forms: a hit leaves a two-second patch of the element that keeps applying its effect. */
+    private void hazard(Player caster, Release release, Location at, long now) {
+        if (now < release.nextHazardAt) {
+            return;
+        }
+        release.nextHazardAt = now + 700;
+        Location center = at.clone();
+        for (int i = 0; i < 4 && center.getBlock().isPassable()
+                && center.clone().subtract(0, 1, 0).getBlock().isPassable(); i++) {
+            center.subtract(0, 1, 0);
+        }
+        center.setY(center.getBlockY() + 0.1);
+        new BukkitRunnable() {
+            int tick;
+
+            @Override
+            public void run() {
+                if (tick > 40 || !caster.isOnline()) {
+                    cancel();
+                    return;
+                }
+                release.element.hazardTick(center, tick);
+                if (tick % 10 == 0) {
+                    for (LivingEntity entity : center.getNearbyLivingEntities(1.6, 1.5)) {
+                        if (service.canStrike(caster, entity)) {
+                            release.element.onHit(caster, entity);
+                        }
+                    }
+                }
+                tick += 2;
+            }
+        }.runTaskTimer(plugin, 0L, 2L);
     }
 
     /** Faction-flavoured cast sound shared by several techniques. */
@@ -827,7 +896,7 @@ public final class ReleaseService implements Listener {
                 } else {
                     Vfx.arc(center, forward, size, release.form.color(), 1.8f, 0);
                 }
-                center.getWorld().spawnParticle(release.theme.accent, center, 4, 0.5, 0.3, 0.5, 0.02);
+                accent(release, center, 4, 0.5, 0.3, 0.5, 0.02);
                 if (release.theme == Theme.SOUL_REAPER) {
                     center.getWorld().spawnParticle(Particle.SWEEP_ATTACK, center, 1);
                 }
@@ -885,7 +954,7 @@ public final class ReleaseService implements Listener {
     private static void afterimage(Location at, Release release) {
         Vfx.burst(at, release.form.color(), 40, 0.35, 1.5f);
         at.getWorld().spawnParticle(Particle.CLOUD, at, 12, 0.3, 0.6, 0.3, 0.02);
-        at.getWorld().spawnParticle(release.theme.accent, at, 10, 0.3, 0.6, 0.3, 0.05);
+        accent(release, at, 10, 0.3, 0.6, 0.3, 0.05);
     }
 
     private static void blinkSound(Location at, Theme theme) {
@@ -929,7 +998,7 @@ public final class ReleaseService implements Listener {
             public void run() {
                 for (int sub = 0; sub < speed; sub++) {
                     Location point = origin.clone().add(forward.clone().multiply(1 + step * speed + sub));
-                    point.getWorld().spawnParticle(release.theme.accent, point, 1, 0, 0, 0, 0);
+                    accent(release, point, 1, 0, 0, 0, 0);
                     point.getWorld().spawnParticle(Particle.DUST, point, cero ? 6 : 2, cero ? 0.22 : 0.08,
                             cero ? 0.22 : 0.08, cero ? 0.22 : 0.08, 0, release.form.dust(cero ? 2.0f : 1.4f));
                     LivingEntity struck = null;
@@ -949,7 +1018,7 @@ public final class ReleaseService implements Listener {
             }
 
             private void burst(Location point, LivingEntity struck) {
-                point.getWorld().spawnParticle(release.theme.accent, point, 40, 0.2, 0.2, 0.2, 0.25);
+                accent(release, point, 40, 0.2, 0.2, 0.2, 0.25);
                 Vfx.burst(point, release.form.color(), 30, 0.9, 1.8f);
                 point.getWorld().spawnParticle(Particle.EXPLOSION, point, 1);
                 Vfx.sound(point, Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0f, 0.8f);
@@ -991,7 +1060,7 @@ public final class ReleaseService implements Listener {
                 }
                 Location at = player.getLocation().add(0, 1, 0);
                 at.getWorld().spawnParticle(Particle.CLOUD, at, 4, 0.3, 0.4, 0.3, 0.02);
-                at.getWorld().spawnParticle(release.theme.accent, at, 2, 0.3, 0.4, 0.3, 0.02);
+                accent(release, at, 2, 0.3, 0.4, 0.3, 0.02);
                 Vfx.burst(at, release.form.color(), 6, 0.5, 1.3f);
                 for (LivingEntity entity : at.getNearbyLivingEntities(1.9)) {
                     if (hit.add(entity.getUniqueId()) && service.canStrike(player, entity)) {
@@ -1046,7 +1115,7 @@ public final class ReleaseService implements Listener {
                     if (i % 3 == 0) {
                         point.getWorld().spawnParticle(Particle.DUST, point.add(0, 0.4, 0), 1, 0, 0, 0, 0,
                                 release.form.dust(1.5f));
-                        point.getWorld().spawnParticle(release.theme.accent, point, 1, 0, 0.2, 0, 0.02);
+                        accent(release, point, 1, 0, 0.2, 0, 0.02);
                     }
                 }
                 ring++;
@@ -1083,7 +1152,7 @@ public final class ReleaseService implements Listener {
             Vfx.ring(center.clone().add(0, 0.3 + layer * 0.8, 0), 4 - layer * 0.9, 36 - layer * 8,
                     release.form.color(), 1.3f);
         }
-        center.getWorld().spawnParticle(release.theme.accent, center.clone().add(0, 1, 0), 20, 0.5, 0.8, 0.5, 0.05);
+        accent(release, center.clone().add(0, 1, 0), 20, 0.5, 0.8, 0.5, 0.05);
         return true;
     }
 
@@ -1217,7 +1286,7 @@ public final class ReleaseService implements Listener {
                 Location floor = groundAt(spot);
                 Location impact = floor != null ? floor : spot;
                 Vfx.line(impact.clone().add(0, 9, 0), impact, release.form.color(), 1.1f, 0.45);
-                impact.getWorld().spawnParticle(release.theme.accent, impact, 8, 0.2, 0.1, 0.2, 0.05);
+                accent(release, impact, 8, 0.2, 0.1, 0.2, 0.05);
                 Vfx.burst(impact.clone().add(0, 0.3, 0), release.form.color(), 10, 0.4, 1.3f);
                 Vfx.sound(impact, release.theme == Theme.HOLLOW ? Sound.ENTITY_BLAZE_SHOOT
                         : Sound.ENTITY_ARROW_HIT, 0.8f, 1.2f + random.nextFloat() * 0.4f);
@@ -1255,7 +1324,7 @@ public final class ReleaseService implements Listener {
                 player.setFallDistance(0);
                 Location at = player.getLocation();
                 Vfx.burst(at.clone().add(0, 1, 0), release.form.color(), 4, 0.3, 1.3f);
-                at.getWorld().spawnParticle(release.theme.accent, at, 2, 0.2, 0.2, 0.2, 0.01);
+                accent(release, at, 2, 0.2, 0.2, 0.2, 0.01);
                 if (!diving && tick >= 9) {
                     diving = true;
                     player.setVelocity(horizontal(player).multiply(0.6).setY(-1.9));
@@ -1299,7 +1368,7 @@ public final class ReleaseService implements Listener {
                 raisePillar(ground, block, 1.6 + step * 0.12);
                 ground.getWorld().spawnParticle(Particle.BLOCK, ground.clone().add(0, 0.2, 0), 14, 0.4, 0.2, 0.4, 0.1,
                         block);
-                ground.getWorld().spawnParticle(release.theme.accent, ground.clone().add(0, 1, 0), 4, 0.2, 0.6, 0.2, 0.02);
+                accent(release, ground.clone().add(0, 1, 0), 4, 0.2, 0.6, 0.2, 0.02);
                 Vfx.sound(ground, Sound.BLOCK_POINTED_DRIPSTONE_LAND, 1.0f, 0.6f + step * 0.05f);
                 for (LivingEntity entity : ground.getNearbyLivingEntities(1.5, 2.5)) {
                     if (hit.add(entity.getUniqueId()) && service.canStrike(player, entity)) {
@@ -1439,7 +1508,7 @@ public final class ReleaseService implements Listener {
                                 0.05, 0.05, 0.05, 0, Vfx.dust(dark, 1.6f));
                     }
                 }
-                world.spawnParticle(release.theme.accent, base.clone().add(0, 1, 0), 6, 0.6, 1.0, 0.6, 0.05);
+                accent(release, base.clone().add(0, 1, 0), 6, 0.6, 1.0, 0.6, 0.05);
                 if (tick == 0) {
                     // A bolt of light from the sky, drawn with particles so it is not heard server-wide.
                     Vfx.line(base.clone().add(0, 18, 0), base, release.theme == Theme.HOLLOW ? dark : Color.WHITE, 1.6f, 0.4);
@@ -1784,7 +1853,7 @@ public final class ReleaseService implements Listener {
                     double r = Math.sqrt(Math.max(0.5, 36 - h * h * 2.2));
                     Vfx.ring(center.clone().add(0, 0.2 + h, 0), r, (int) (r * 6), release.form.color(), 1.2f);
                 }
-                center.getWorld().spawnParticle(release.theme.accent, center.clone().add(0, 1, 0), 10, 3, 1.5, 3, 0.02);
+                accent(release, center.clone().add(0, 1, 0), 10, 3, 1.5, 3, 0.02);
                 for (Player ally : center.getNearbyPlayers(6)) {
                     if (ally.equals(player) || (AwakeningService.canPlay(ally) && AwakeningPowers.allies(player, ally))) {
                         ally.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 30, 1, false, true, true));

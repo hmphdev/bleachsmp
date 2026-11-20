@@ -85,6 +85,31 @@ Self-moderation, since nobody has to watch:
 
 Everything is tunable under `awakenings.crisis`; set `enabled: false` to go back to unlocking on full evidence.
 
+### Elements
+
+Every form has an element that layers its own particles, sounds and a light on-hit effect over everything the form
+does: its techniques, impacts, aura, ultimate and release. Two forms with the same technique look and sound different.
+A form's Shikai and Bankai share an element.
+
+| Element | Look | On hit |
+| --- | --- | --- |
+| Fire | flames, lava sparks | sets enemies alight |
+| Ice | snowflakes, frost rings | freezes |
+| Lightning | sparks, jagged arcs | brief stun |
+| Wind | gusts, swirling cloud | lifts enemies |
+| Shadow | ink, black smoke | darkness on players |
+| Water | splashes, bubbles | heavy slowness |
+| Blood | crimson spores, red streaks | drains a little life |
+| Petal / Pale Petal | cherry or pale-oak leaves | — |
+| Earth | rock debris, dust plumes | mining fatigue |
+| Light | light rods, glow | glowing |
+| Poison | green spores, slime | poison |
+| Sound | notes, ringing rings | nausea |
+
+**Advanced forms turn the element up.** Their transformation ends in a bigger element-specific eruption (falling lightning,
+a petal cyclone, a pillar of light, a water wall…), their aura is denser, and their hits leave a two-second patch of the
+element on the ground that keeps applying its on-hit effect to enemies standing in it.
+
 ### First-form releases
 
 Every faction's first form is a 30-second release rather than a single move: Soul Reaper **Shikai**, Hollow **Resurrección**, Quincy **Schrift**, and **Awakened Fullbring**. The playstyle that unlocked the form decides which one awakens. Releasing calls out its command to nearby players, shows its name on screen, plays the faction's release animation and sounds, and bursts spiritual pressure that pushes nearby enemies back. A countdown boss bar and a coloured aura stay up while it is released.
