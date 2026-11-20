@@ -70,6 +70,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
         awakenings.bankai().start();
         getServer().getPluginManager().registerEvents(awakenings.crisis(), this);
         getServer().getPluginManager().registerEvents(awakenings.signatures(), this);
+        getServer().getPluginManager().registerEvents(awakenings.canon(), this);
         awakenings.crisis().start();
         getServer().getPluginManager().registerEvents(awakenings.pressure(), this);
         awakenings.pressure().start();
@@ -94,6 +95,7 @@ public final class BleachSmpPlugin extends JavaPlugin {
             awakenings.releases().sealAll();
             awakenings.crisis().shutdown();
             awakenings.signatures().shutdown();
+            awakenings.canon().shutdown();
             awakenings.pressure().shutdown();
         }
         savePlayerData();

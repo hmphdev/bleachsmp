@@ -29,6 +29,7 @@ public final class AwakeningService {
     private final PressureService pressure;
     private final NamespacedKey firstKey;
     private final NamespacedKey advancedKey;
+    private final CanonMoves canon;
     private final NamespacedKey firstTraitKey;
     private final NamespacedKey advancedTraitKey;
     private final NamespacedKey evidenceKey;
@@ -44,6 +45,7 @@ public final class AwakeningService {
         releases = new ReleaseService(plugin, this);
         crisis = new CrisisService(plugin, this);
         signatures = new SignatureService(plugin, this, releases);
+        canon = new CanonMoves(plugin, this, releases);
         bankai = new BankaiService(plugin, this);
         pressure = new PressureService(plugin, this);
         firstKey = new NamespacedKey(plugin, "first_awakening");
@@ -66,6 +68,10 @@ public final class AwakeningService {
 
     public CrisisService crisis() {
         return crisis;
+    }
+
+    public CanonMoves canon() {
+        return canon;
     }
 
     public SignatureService signatures() {
@@ -215,7 +221,7 @@ public final class AwakeningService {
     }
 
     void releaseAdvancedAwakened(Player player, Faction faction, Playstyle style, Playstyle trait) {
-        releases.release(player, faction, style, trait, true);
+        releases.release(player, faction, weaponStyle(player, style), trait, true);
         if (trait != null) {
             AwakeningPowers.applyTrait(player, trait);
         }
@@ -291,7 +297,8 @@ public final class AwakeningService {
     private void showForm(Player player, Faction faction, Playstyle style, boolean advanced) {
         Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
         player.sendMessage(Component.text(formName(faction, advanced) + ": " + (style == null ? "Locked"
-                : powerName(player, faction, style, advanced) + " — " + powerDescription(player, faction, style, trait, advanced)
+                : powerName(player, faction, weaponStyle(player, style), advanced) + " — "
+                        + powerDescription(player, faction, weaponStyle(player, style), trait, advanced)
                         + (trait == null ? "" : " Trait: " + AwakeningPowers.traitName(trait) + ".")),
                 style == null ? NamedTextColor.GRAY : faction.color()));
     }
@@ -340,7 +347,7 @@ public final class AwakeningService {
             return;
         }
         Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
-        releases.release(player, faction, style, trait, advanced);
+        releases.release(player, faction, weaponStyle(player, style), trait, advanced);
         if (trait != null) {
             AwakeningPowers.applyTrait(player, trait);
         }
@@ -421,6 +428,15 @@ public final class AwakeningService {
             }
         }
         return evidence;
+    }
+
+    /**
+     * The playstyle that picks a player's weapon. A Bankai is the same zanpakutō as its Shikai, so an advanced form
+     * always uses the first form's playstyle when there is one.
+     */
+    Playstyle weaponStyle(Player player, Playstyle fallback) {
+        Playstyle first = unlocked(player, false);
+        return first != null ? first : fallback;
     }
 
     private Playstyle unlocked(Player player, boolean advanced) {

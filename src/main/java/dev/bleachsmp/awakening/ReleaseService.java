@@ -121,228 +121,14 @@ public final class ReleaseService implements Listener {
         }
     }
 
-    private static Form f(String name, String callout, int r, int g, int b, TextColor text, BossBar.Color bar) {
-        return new Form(name, callout, Color.fromRGB(r, g, b), text, bar);
-    }
-
-    // ---------------------------------------------------------------- kit tables
-
-    static Form form(Faction faction, Playstyle style, int variant) {
-        return variant == 0 ? formA(faction, style) : formB(faction, style);
-    }
-
-    private static Form formA(Faction faction, Playstyle style) {
-        return switch (faction) {
-            case SOUL_REAPER -> switch (style) {
-                case VANGUARD -> f("Akagetsu", "Howl, Akagetsu!", 220, 30, 45, NamedTextColor.RED, BossBar.Color.RED);
-                case MIRAGE -> f("Kagerō", "Deceive, Kagerō!", 150, 90, 230, NamedTextColor.LIGHT_PURPLE, BossBar.Color.PURPLE);
-                case MARKSMAN -> f("Ryūsei", "Pierce, Ryūsei!", 255, 205, 60, NamedTextColor.GOLD, BossBar.Color.YELLOW);
-                case WAYFARER -> f("Hayate", "Soar, Hayate!", 120, 235, 200, NamedTextColor.AQUA, BossBar.Color.GREEN);
-                case ARTIFICER -> f("Iwagane", "Crush, Iwagane!", 165, 120, 75, NamedTextColor.GOLD, BossBar.Color.WHITE);
-                case KEEPER -> f("Mamorigami", "Shelter, Mamorigami!", 110, 190, 255, NamedTextColor.BLUE, BossBar.Color.BLUE);
-            };
-            case HOLLOW -> switch (style) {
-                case VANGUARD -> f("Lobo Carmesí", "Desgarra, Lobo Carmesí!", 170, 15, 25, NamedTextColor.DARK_RED, BossBar.Color.RED);
-                case MIRAGE -> f("Espejismo", "Engaña, Espejismo!", 205, 205, 215, NamedTextColor.GRAY, BossBar.Color.WHITE);
-                case MARKSMAN -> f("Halcón Negro", "Dispara, Halcón Negro!", 120, 20, 150, NamedTextColor.DARK_PURPLE, BossBar.Color.PURPLE);
-                case WAYFARER -> f("Viento Hueco", "Corre, Viento Hueco!", 220, 205, 160, NamedTextColor.YELLOW, BossBar.Color.YELLOW);
-                case ARTIFICER -> f("Coloso", "Aplasta, Coloso!", 125, 90, 55, NamedTextColor.GOLD, BossBar.Color.WHITE);
-                case KEEPER -> f("Caparazón", "Protege, Caparazón!", 60, 160, 115, NamedTextColor.DARK_GREEN, BossBar.Color.GREEN);
-            };
-            case QUINCY -> switch (style) {
-                case VANGUARD -> f("The Assault", "Schrift A — The Assault!", 110, 170, 255, NamedTextColor.BLUE, BossBar.Color.BLUE);
-                case MIRAGE -> f("The Illusion", "Schrift I — The Illusion!", 170, 140, 255, NamedTextColor.LIGHT_PURPLE, BossBar.Color.PURPLE);
-                case MARKSMAN -> f("The Starshot", "Schrift S — The Starshot!", 200, 235, 255, NamedTextColor.AQUA, BossBar.Color.BLUE);
-                case WAYFARER -> f("The Flight", "Schrift F — The Flight!", 150, 255, 235, NamedTextColor.AQUA, BossBar.Color.GREEN);
-                case ARTIFICER -> f("The Bulwark", "Schrift B — The Bulwark!", 190, 200, 225, NamedTextColor.GRAY, BossBar.Color.WHITE);
-                case KEEPER -> f("The Haven", "Schrift H — The Haven!", 255, 250, 190, NamedTextColor.YELLOW, BossBar.Color.YELLOW);
-            };
-            case FULLBRINGER -> switch (style) {
-                case VANGUARD -> f("Crimson Knuckle", "Fullbring: Crimson Knuckle!", 255, 115, 40, NamedTextColor.GOLD, BossBar.Color.RED);
-                case MIRAGE -> f("Mirror Coat", "Fullbring: Mirror Coat!", 230, 150, 255, NamedTextColor.LIGHT_PURPLE, BossBar.Color.PURPLE);
-                case MARKSMAN -> f("Bullet Echo", "Fullbring: Bullet Echo!", 255, 220, 80, NamedTextColor.YELLOW, BossBar.Color.YELLOW);
-                case WAYFARER -> f("Sky Runner", "Fullbring: Sky Runner!", 130, 215, 255, NamedTextColor.AQUA, BossBar.Color.BLUE);
-                case ARTIFICER -> f("Iron Maker", "Fullbring: Iron Maker!", 175, 175, 190, NamedTextColor.GRAY, BossBar.Color.WHITE);
-                case KEEPER -> f("Heart Lock", "Fullbring: Heart Lock!", 255, 140, 185, NamedTextColor.LIGHT_PURPLE, BossBar.Color.PINK);
-            };
-        };
-    }
-
-    private static Form formB(Faction faction, Playstyle style) {
-        return switch (faction) {
-            case SOUL_REAPER -> switch (style) {
-                case VANGUARD -> f("Homuramaru", "Rage, Homuramaru!", 255, 110, 30, NamedTextColor.GOLD, BossBar.Color.RED);
-                case MIRAGE -> f("Oboromaru", "Flicker, Oboromaru!", 90, 110, 200, NamedTextColor.DARK_AQUA, BossBar.Color.BLUE);
-                case MARKSMAN -> f("Amagumo", "Rain, Amagumo!", 140, 160, 190, NamedTextColor.GRAY, BossBar.Color.WHITE);
-                case WAYFARER -> f("Kumokiri", "Ascend, Kumokiri!", 235, 245, 255, NamedTextColor.WHITE, BossBar.Color.WHITE);
-                case ARTIFICER -> f("Iwaoni", "Rise, Iwaoni!", 110, 130, 95, NamedTextColor.DARK_GREEN, BossBar.Color.GREEN);
-                case KEEPER -> f("Kusarigami", "Bind, Kusarigami!", 200, 60, 120, NamedTextColor.LIGHT_PURPLE, BossBar.Color.PINK);
-            };
-            case HOLLOW -> switch (style) {
-                case VANGUARD -> f("Tiburón", "Devora, Tiburón!", 40, 90, 160, NamedTextColor.DARK_BLUE, BossBar.Color.BLUE);
-                case MIRAGE -> f("Sombra Pálida", "Desvanece, Sombra Pálida!", 160, 150, 180, NamedTextColor.GRAY, BossBar.Color.PURPLE);
-                case MARKSMAN -> f("Escorpión", "Llueve, Escorpión!", 200, 90, 20, NamedTextColor.GOLD, BossBar.Color.YELLOW);
-                case WAYFARER -> f("Águila Hueca", "Vuela, Águila Hueca!", 245, 240, 225, NamedTextColor.WHITE, BossBar.Color.WHITE);
-                case ARTIFICER -> f("Osario", "Brota, Osario!", 235, 225, 195, NamedTextColor.YELLOW, BossBar.Color.WHITE);
-                case KEEPER -> f("Araña Blanca", "Atrapa, Araña Blanca!", 215, 215, 230, NamedTextColor.WHITE, BossBar.Color.WHITE);
-            };
-            case QUINCY -> switch (style) {
-                case VANGUARD -> f("The Rampage", "Schrift R — The Rampage!", 70, 120, 255, NamedTextColor.BLUE, BossBar.Color.BLUE);
-                case MIRAGE -> f("The Mirror", "Schrift M — The Mirror!", 225, 235, 255, NamedTextColor.WHITE, BossBar.Color.WHITE);
-                case MARKSMAN -> f("The Deluge", "Schrift D — The Deluge!", 90, 200, 255, NamedTextColor.AQUA, BossBar.Color.BLUE);
-                case WAYFARER -> f("The Zenith", "Schrift Z — The Zenith!", 255, 240, 150, NamedTextColor.YELLOW, BossBar.Color.YELLOW);
-                case ARTIFICER -> f("The Pillar", "Schrift P — The Pillar!", 160, 210, 255, NamedTextColor.AQUA, BossBar.Color.WHITE);
-                case KEEPER -> f("The Tether", "Schrift T — The Tether!", 130, 255, 190, NamedTextColor.GREEN, BossBar.Color.GREEN);
-            };
-            case FULLBRINGER -> switch (style) {
-                case VANGUARD -> f("Rewind Blade", "Fullbring: Rewind Blade!", 255, 70, 90, NamedTextColor.RED, BossBar.Color.RED);
-                case MIRAGE -> f("Shuffle Deck", "Fullbring: Shuffle Deck!", 120, 255, 140, NamedTextColor.GREEN, BossBar.Color.GREEN);
-                case MARKSMAN -> f("Echo Rain", "Fullbring: Echo Rain!", 255, 180, 60, NamedTextColor.GOLD, BossBar.Color.YELLOW);
-                case WAYFARER -> f("Meteor Boots", "Fullbring: Meteor Boots!", 255, 90, 40, NamedTextColor.RED, BossBar.Color.RED);
-                case ARTIFICER -> f("Forge Ground", "Fullbring: Forge Ground!", 205, 125, 70, NamedTextColor.GOLD, BossBar.Color.WHITE);
-                case KEEPER -> f("Lifeline", "Fullbring: Lifeline!", 255, 120, 120, NamedTextColor.RED, BossBar.Color.PINK);
-            };
-        };
-    }
-
-    static String techniqueName(Faction faction, Mechanic mechanic) {
-        return switch (faction) {
-            case SOUL_REAPER -> switch (mechanic) {
-                case WAVE -> "Crimson Fang";
-                case BLINK -> "Haze Step";
-                case BEAM -> "Falling Star";
-                case DASH -> "Gale Passage";
-                case SLAM -> "Mountain Breaker";
-                case WARD -> "Shrine Ward";
-                case FLURRY -> "Hundred Moon Flurry";
-                case SCATTER -> "Mirror Haze";
-                case RAIN -> "Heaven's Rain";
-                case SKYFALL -> "Falling Moon";
-                case PILLARS -> "Stone Fangs";
-                case CHAINS -> "Binding Thread";
-            };
-            case HOLLOW -> switch (mechanic) {
-                case WAVE -> "Garra Roja";
-                case BLINK -> "Sonido Fantasma";
-                case BEAM -> "Cero Oscuro";
-                case DASH -> "Embestida";
-                case SLAM -> "Terremoto";
-                case WARD -> "Coraza Viva";
-                case FLURRY -> "Frenesí";
-                case SCATTER -> "Eco Vacío";
-                case RAIN -> "Lluvia de Cero";
-                case SKYFALL -> "Caída del Rey";
-                case PILLARS -> "Colmillos de Hueso";
-                case CHAINS -> "Cadenas del Hambre";
-            };
-            case QUINCY -> switch (mechanic) {
-                case WAVE -> "Heiliger Sturm";
-                case BLINK -> "Schattenschritt";
-                case BEAM -> "Sternregen";
-                case DASH -> "Lichtsprung";
-                case SLAM -> "Erdbrecher";
-                case WARD -> "Lichtschild";
-                case FLURRY -> "Klingenwirbel";
-                case SCATTER -> "Spiegelbruch";
-                case RAIN -> "Pfeilregen";
-                case SKYFALL -> "Sternenfall";
-                case PILLARS -> "Lichtsäulen";
-                case CHAINS -> "Bindungsfaden";
-            };
-            case FULLBRINGER -> switch (mechanic) {
-                case WAVE -> "Knuckle Breaker";
-                case BLINK -> "Reflection Swap";
-                case BEAM -> "Echo Shot";
-                case DASH -> "Ground Skip";
-                case SLAM -> "Forge Quake";
-                case WARD -> "Locket Ward";
-                case FLURRY -> "Rapid Rewind";
-                case SCATTER -> "Shuffle Step";
-                case RAIN -> "Echo Barrage";
-                case SKYFALL -> "Meteor Drop";
-                case PILLARS -> "Forge Spikes";
-                case CHAINS -> "Tether Line";
-            };
-        };
-    }
-
-    // ---------------------------------------------------------------- advanced forms
-
-    /** Advanced form names, indexed [variant][playstyle ordinal]. */
-    private static String[][] advancedNames(Faction faction) {
-        return switch (faction) {
-            case SOUL_REAPER -> new String[][] {
-                {"Akagetsu Tenrō", "Kagerō Mugenkyō", "Ryūsei Gingaō", "Hayate Tenkū", "Iwagane Daichiō", "Mamorigami Kekkaiden"},
-                {"Homuramaru Gōen", "Oboromaru Yumeutsutsu", "Amagumo Raiu", "Kumokiri Shippū", "Iwaoni Senzan", "Kusarigami Shinbaku"}};
-            case HOLLOW -> new String[][] {
-                {"Lobo Carmesí Rey", "Espejismo Eterno", "Halcón Negro Abismal", "Tormenta Hueca", "Coloso Titán", "Caparazón Sagrado"},
-                {"Tiburón Abisal", "Sombra Infinita", "Escorpión Rey", "Águila Tempestad", "Osario Imperial", "Araña Reina"}};
-            case QUINCY -> new String[][] {
-                {"Sturmengel", "Spiegelengel", "Sternengel", "Himmelsflügel", "Bollwerkengel", "Heiligenschein"},
-                {"Zornflügel", "Trugbild", "Sintflut", "Zenitflug", "Säulenthron", "Bandengel"}};
-            case FULLBRINGER -> new String[][] {
-                {"Crimson Knuckle Overdrive", "Mirror Coat Infinite", "Bullet Echo Arsenal", "Sky Runner Ascension",
-                        "Iron Maker Foundry", "Heart Lock Sanctuary"},
-                {"Rewind Blade Zero", "Shuffle Deck Joker", "Echo Rain Storm", "Meteor Boots Impact",
-                        "Forge Ground Colossus", "Lifeline Eternal"}};
-        };
-    }
-
-    private static String advancedCallout(Faction faction, String name) {
-        return switch (faction) {
-            case SOUL_REAPER -> "Bankai! " + name + "!";
-            case HOLLOW -> "Segunda Etapa — " + name + "!";
-            case QUINCY -> "Vollständig: " + name + "!";
-            case FULLBRINGER -> "Complete Fullbring: " + name + "!";
-        };
-    }
-
-    static Form form(Faction faction, Playstyle style, int variant, boolean advanced) {
-        Form base = form(faction, style, variant);
-        if (!advanced) {
-            return base;
-        }
-        String name = advancedNames(faction)[variant][style.ordinal()];
-        return new Form(name, advancedCallout(faction, name), base.color(), base.text(), base.bar());
-    }
-
-    /** The advanced form's once-per-release ultimate, set by its playstyle. */
-    static String ultimateName(Faction faction, Playstyle style) {
-        String[] names = switch (faction) {
-            case SOUL_REAPER -> new String[] {"Heaven-Rending Moon", "Thousand Mirage Execution", "Galaxy Fall",
-                    "Divine Tempest", "World Breaker", "Sanctum of Light"};
-            case HOLLOW -> new String[] {"Desgarro Final", "Ejecución Fantasma", "Lluvia del Abismo", "Huracán Hueco",
-                    "Fin del Mundo", "Santuario Vacío"};
-            case QUINCY -> new String[] {"Heiliges Gericht", "Phantomhinrichtung", "Sternenflut", "Himmelssturm",
-                    "Weltbrecher", "Lichtdom"};
-            case FULLBRINGER -> new String[] {"Final Knuckle", "Grand Shuffle", "Full Clip Storm", "Stratosphere Drop",
-                    "Foundry Quake", "Lifeline Sanctuary"};
-        };
-        return names[style.ordinal()];
-    }
-
-    static String ultimateDescription(Playstyle style) {
-        return switch (style) {
-            case VANGUARD -> "two volleys of three giant waves";
-            case MIRAGE -> "strike up to five enemies in sequence from behind, then return";
-            case MARKSMAN -> "a 26-bolt storm over a wide area";
-            case WAYFARER -> "a three-second tornado that drags enemies in and hurls them skyward";
-            case ARTIFICER -> "three expanding rings of erupting pillars";
-            case KEEPER -> "an eight-second sanctum that heals allies and grinds down enemies inside it";
-        };
+    static Form form(Canon.Kit kit, boolean advanced) {
+        return new Form(advanced ? kit.advancedName() : kit.name(), advanced ? kit.advancedCommand() : kit.command(),
+                kit.color(), kit.text(), kit.bar());
     }
 
     // ---------------------------------------------------------------- kit selection
 
-    /**
-     * The form variant (0 or 1) a player gets for a playstyle. Stable per player and spread evenly. First and
-     * advanced forms roll separately, so a player's Bankai doesn't simply mirror their Shikai.
-     */
-    static int variant(UUID id, Playstyle style, boolean advanced) {
-        return (int) (hash(id, style.ordinal() + 1 + (advanced ? 32 : 0)) & 1);
-    }
-
-    private static long hash(UUID id, int salt) {
+    static long hash(UUID id, int salt) {
         long h = id.getMostSignificantBits() ^ Long.rotateLeft(id.getLeastSignificantBits(), 17)
                 ^ (salt * 0x9E3779B97F4A7C15L);
         h ^= h >>> 33;
@@ -351,46 +137,37 @@ public final class ReleaseService implements Listener {
         return h;
     }
 
+    /** The real form a player gets for a playstyle; Shikai and Bankai of a player are the same weapon. */
+    static Canon.Kit kit(UUID id, Faction faction, Playstyle style) {
+        return Canon.kit(id, faction, style);
+    }
+
     static Form form(UUID id, Faction faction, Playstyle style, boolean advanced) {
-        return form(faction, style, variant(id, style, advanced), advanced);
+        return form(kit(id, faction, style), advanced);
     }
 
     static Element element(UUID id, Faction faction, Playstyle style, boolean advanced) {
-        return Element.of(faction, style, variant(id, style, advanced));
+        return kit(id, faction, style).element();
     }
 
-    static Mechanic primary(UUID id, Playstyle style, boolean advanced) {
-        return Mechanic.of(style, variant(id, style, advanced));
+    static Mechanic primary(UUID id, Faction faction, Playstyle style) {
+        return kit(id, faction, style).main();
     }
 
-    /**
-     * Secondary technique: from the secondary playstyle if there is one. Players without one draw a stable
-     * pick from all the other techniques, so they don't all share the same fallback.
-     */
-    static Mechanic secondary(UUID id, Playstyle style, Playstyle trait, boolean advanced) {
-        if (trait != null && trait != style) {
-            return Mechanic.of(trait, variant(id, trait, advanced));
-        }
-        Mechanic main = primary(id, style, advanced);
-        Mechanic[] all = Mechanic.values();
-        int pick = (int) Math.floorMod(hash(id, advanced ? 133 : 101), (long) (all.length - 1));
-        return all[pick >= main.ordinal() ? pick + 1 : pick];
+    static Mechanic secondary(UUID id, Faction faction, Playstyle style) {
+        return kit(id, faction, style).second();
     }
 
     static String description(UUID id, Faction faction, Playstyle style, Playstyle trait, boolean advanced) {
-        Form form = form(id, faction, style, advanced);
-        Mechanic main = primary(id, style, advanced);
-        Mechanic second = secondary(id, style, trait, advanced);
-        String text = "\"" + form.callout() + "\" A timed release. Right-click: " + techniqueName(faction, main) + " — "
-                + main.description + ". Sneak + right-click: " + techniqueName(faction, second) + " — "
-                + second.description + ". " + Theme.of(faction).onHit + " Element: " + element(id, faction, style, advanced).label
-                + " — it " + element(id, faction, style, advanced).effect + ". Q (signature): "
-                + SignatureService.name(faction, style, variant(id, style, advanced)) + " — "
-                + SignatureService.description(faction, style, variant(id, style, advanced))
-                + (advanced ? " (empowered)." : ".");
+        Canon.Kit kit = kit(id, faction, style);
+        Form form = form(kit, advanced);
+        String text = kit.owner() + "'s " + kit.name() + ". \"" + form.callout() + "\" Right-click: " + kit.mainName()
+                + " — " + kit.main().description + ". Sneak + right-click: " + kit.secondName() + " — "
+                + kit.second().description + ". Q: " + kit.signatureName() + " — " + kit.signatureText()
+                + (advanced ? " (empowered)." : ".") + " " + Theme.of(faction).onHit + " Element: " + kit.element().label
+                + " — it " + kit.element().effect + ".";
         if (advanced) {
-            text += " Techniques hit harder. F (once per release): " + ultimateName(faction, style) + " — "
-                    + ultimateDescription(style) + ". Sneak + F seals.";
+            text += " F (once per release): " + kit.specialName() + " — " + kit.specialText() + ". Sneak + F seals.";
         }
         return text;
     }
@@ -400,6 +177,7 @@ public final class ReleaseService implements Listener {
     static final class Release {
         final Faction faction;
         final Playstyle style;
+        final Canon.Kit kit;
         final int variant;
         final boolean advanced;
         final double power;
@@ -423,10 +201,15 @@ public final class ReleaseService implements Listener {
         final Map<UUID, Long> marks = new HashMap<>();
         final Map<UUID, Long> rootReadyAt = new HashMap<>();
 
-        Release(Faction faction, Playstyle style, int variant, boolean advanced, double power, Form form,
-                Element element, Mechanic main, Mechanic second, long startedAt, long endsAt, BossBar bar) {
+        Release(Faction faction, Playstyle style, Canon.Kit kit, boolean advanced, double power, Form form,
+                long startedAt, long endsAt, BossBar bar) {
             this.faction = faction;
             this.style = style;
+            this.kit = kit;
+            int variant = kit.index();
+            Element element = kit.element();
+            Mechanic main = kit.main();
+            Mechanic second = kit.second();
             this.variant = variant;
             this.advanced = advanced;
             this.power = power;
@@ -484,7 +267,8 @@ public final class ReleaseService implements Listener {
     void release(Player player, Faction faction, Playstyle style, Playstyle trait, boolean advanced) {
         seal(player, false);
         UUID id = player.getUniqueId();
-        Form form = form(id, faction, style, advanced);
+        Canon.Kit kit = kit(id, faction, style);
+        Form form = form(kit, advanced);
         Theme theme = Theme.of(faction);
         long now = System.currentTimeMillis();
         int seconds = durationSeconds(advanced);
@@ -493,11 +277,10 @@ public final class ReleaseService implements Listener {
         String tier = AwakeningService.formName(faction, advanced);
         BossBar bar = BossBar.bossBar(Component.text(tier + " — " + form.name(), form.text(), TextDecoration.BOLD),
                 1.0f, form.bar(), advanced ? BossBar.Overlay.NOTCHED_20 : BossBar.Overlay.NOTCHED_10);
-        Element element = element(id, faction, style, advanced);
-        Release release = new Release(faction, style, variant(id, style, advanced), advanced, power, form, element,
-                primary(id, style, advanced),
-                secondary(id, style, trait, advanced), now, now + seconds * 1000L, bar);
+        Element element = kit.element();
+        Release release = new Release(faction, style, kit, advanced, power, form, now, now + seconds * 1000L, bar);
         active.put(id, release);
+        service.canon().released(player, release);
 
         Location loc = player.getLocation();
         Component callout = Component.text(player.getName() + ": ", NamedTextColor.GRAY)
@@ -511,10 +294,10 @@ public final class ReleaseService implements Listener {
                 Component.text(advanced ? form.name() : tier, advanced ? form.text() : NamedTextColor.WHITE),
                 Title.Times.times(Duration.ofMillis(advanced ? 300 : 150), Duration.ofMillis(advanced ? 2200 : 1400),
                         Duration.ofMillis(600))));
-        player.sendMessage(Component.text("Right-click: " + techniqueName(faction, release.main)
-                + "  |  Sneak + right-click: " + techniqueName(faction, release.second)
-                + "  |  Q: " + SignatureService.name(faction, style, release.variant)
-                + (advanced ? "  |  F: " + ultimateName(faction, style) + "  |  Sneak + F: seal" : ""), form.text()));
+        player.sendMessage(Component.text("Right-click: " + kit.mainName()
+                + "  |  Sneak + right-click: " + kit.secondName()
+                + "  |  Q: " + kit.signatureName()
+                + (advanced ? "  |  F: " + kit.specialName() + "  |  Sneak + F: seal" : ""), form.text()));
         player.showBossBar(bar);
         player.addPotionEffect(new PotionEffect(theme.passive, seconds * 20, theme.passiveAmplifier + (advanced ? 1 : 0),
                 false, false, true));
@@ -566,16 +349,15 @@ public final class ReleaseService implements Listener {
     }
 
     private static void showCooldowns(Player player, Release release, long now) {
-        player.sendActionBar(cooldown(techniqueName(release.faction, release.main), release.mainReadyAt, now, release)
+        player.sendActionBar(cooldown(release.kit.mainName(), release.mainReadyAt, now, release)
                 .append(Component.text("   |   Sneak: ", NamedTextColor.DARK_GRAY))
-                .append(cooldown(techniqueName(release.faction, release.second), release.secondReadyAt, now, release))
+                .append(cooldown(release.kit.secondName(), release.secondReadyAt, now, release))
                 .append(Component.text("   |   Q: ", NamedTextColor.DARK_GRAY))
-                .append(cooldown(SignatureService.name(release.faction, release.style, release.variant),
-                        release.signatureReadyAt, now, release))
+                .append(cooldown(release.kit.signatureName(), release.signatureReadyAt, now, release))
                 .append(release.advanced ? Component.text("   |   F: ", NamedTextColor.DARK_GRAY)
                         .append(release.ultimateUsed
-                                ? Component.text(ultimateName(release.faction, release.style) + " spent", NamedTextColor.GRAY)
-                                : Component.text(ultimateName(release.faction, release.style) + " ✔", release.form.text(),
+                                ? Component.text(release.kit.specialName() + " spent", NamedTextColor.GRAY)
+                                : Component.text(release.kit.specialName() + " ✔", release.form.text(),
                                         TextDecoration.BOLD))
                         : Component.empty()));
     }
@@ -754,7 +536,7 @@ public final class ReleaseService implements Listener {
             return;
         }
         Mechanic mechanic = secondary ? release.second : release.main;
-        String name = techniqueName(release.faction, mechanic);
+        String name = secondary ? release.kit.secondName() : release.kit.mainName();
         long now = System.currentTimeMillis();
         long readyAt = secondary ? release.secondReadyAt : release.mainReadyAt;
         if (readyAt > now) {
@@ -1858,19 +1640,20 @@ public final class ReleaseService implements Listener {
         if (release == null || !release.advanced) {
             return;
         }
-        String name = ultimateName(release.faction, release.style);
+        String name = release.kit.specialName();
         if (release.ultimateUsed) {
             player.sendActionBar(Component.text(name + " is spent for this release. Sneak + F to seal.",
                     NamedTextColor.GRAY));
             return;
         }
-        boolean used = switch (release.style) {
-            case VANGUARD -> cataclysm(player, release);
-            case MIRAGE -> phantomExecution(player, release, name);
-            case MARKSMAN -> starfall(player, release);
-            case WAYFARER -> tempest(player, release);
-            case ARTIFICER -> worldBreaker(player, release);
-            case KEEPER -> sanctum(player, release);
+        boolean used = switch (release.kit.special()) {
+            case U_CATACLYSM -> cataclysm(player, release);
+            case U_PHANTOM -> phantomExecution(player, release, name);
+            case U_STARFALL -> starfall(player, release);
+            case U_TEMPEST -> tempest(player, release);
+            case U_WORLD_BREAKER -> worldBreaker(player, release);
+            case U_SANCTUM -> sanctum(player, release);
+            default -> service.canon().special(player, release);
         };
         if (!used) {
             return;
