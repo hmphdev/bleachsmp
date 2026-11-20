@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: mvn -B package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bleach-smp-${{ github.sha }}
+          path: target/bleach-smp-*.jar
+          if-no-files-found: error
+
+  # Every push keeps a rolling pre-release per branch, so the latest jar is one click away:
+  # Releases → "Latest build (<branch>)".
+  publish:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-${{ github.ref_name }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: bleach-smp-${{ github.sha }}
+          path: dist
+      - name: Replace the branch's build release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          tag="build-$(echo "$BRANCH" | tr -c 'A-Za-z0-9._-' '-' | sed 's/-*$//')"
+          gh release delete "$tag" --cleanup-tag --yes || true
+          gh release create "$tag" dist/*.jar --target "$SHA" --prerelease \
+            --title "Latest build ($BRANCH)" \
+            --notes "Automatic build of \`$BRANCH\` at ${SHA:0:7}. Replaced on every push. Drop the jar into a Paper 1.21.11 server's plugins folder."
