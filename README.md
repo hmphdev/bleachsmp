@@ -38,7 +38,7 @@ Other future work includes additional boss encounters, death recovery, the Rank 
 
 After choosing a faction, play in Survival or Adventure to build evidence from what you actually do. Melee, sprinting into fights, sneaking, landed projectiles, shield blocks, exploring new areas, mining, building, crafting, enchanting, harvesting, breeding, fishing, sharing beneficial potions, and boss rewards all count. Habits contribute different amounts toward different styles. Most habits have a short scoring cooldown, and no single habit gives enough evidence to unlock a form on its own.
 
-Your first form unlocks automatically at 36 evidence **at any rank**. Advanced forms need 80 fresh evidence and **Rank 2 or better** by default. Each form locks in the style that best matches the habits you showed in that stage. A strong secondary habit can also add a short bonus to the release. For example, a sneaking enchanter who also mines can unlock the Mirage Shikai with a Haste bonus, then earn a Vanguard Bankai by fighting more aggressively. Progress, unlocked forms, and release cooldowns persist across restarts.
+Your first form becomes dormant at 36 evidence **at any rank**. The advanced-form quest begins at 80 fresh evidence and **Rank 2 or better** by default. Each form is based on the habits you showed while earning it. A strong secondary habit can also add a short bonus to the release. For example, a sneaking enchanter who also mines can unlock the Mirage Shikai with a Haste bonus, then earn a Vanguard Bankai by fighting more aggressively. Progress, unlocked forms, and release cooldowns persist across restarts.
 
 | Faction | First form | Advanced form |
 | --- | --- | --- |
@@ -47,14 +47,152 @@ Your first form unlocks automatically at 36 evidence **at any rank**. Advanced f
 | Quincy | Schrift | Vollständig |
 | Fullbringer | Awakened Fullbring | Complete Fullbring |
 
-| Style | Example habits | First ability → Advanced ability |
+| Style | Example habits | Advanced-form ultimate |
 | --- | --- | --- |
-| Vanguard | Melee, sprint attacks, boss clears | **Crimson Rush** (lunging slash) → **Heaven-Splitting Charge** (stronger slash, splash damage, and Speed) |
-| Mirage | Ambushes, enchanting, exploration | **Shattered Reflection** (disappear and fool hostile mobs; your next hit blinds) → **Mirror Labyrinth** (longer concealment and Speed) |
-| Marksman | Projectile hits, fishing, boss clears | **Spirit Lance** (fast spirit arrow) → **Astral Volley** (spread of piercing arrows) |
-| Wayfarer | Exploration, fishing, sprint attacks | **Riftstep** (leap and Slow Falling) → **Windwalk** (longer leap, Slow Falling, and Speed) |
-| Artificer | Mining, building, crafting | **Stone Resonance** (Haste and Night Vision) → **Living Forge** (Haste II, Night Vision, and Absorption) |
-| Keeper | Blocking, farming, sharing potions | **Warding Pulse** (Absorption) → **Sanctuary** (Regeneration and Resistance). Both also buff nearby scoreboard teammates. |
+| Vanguard | Melee, sprint attacks, boss clears | Two volleys of three giant waves |
+| Mirage | Ambushes, enchanting, exploration | Strike up to five enemies in turn from behind, then return |
+| Marksman | Projectile hits, fishing, boss clears | A 26-bolt storm over a wide area |
+| Wayfarer | Exploration, fishing, sprint attacks | A three-second tornado that drags enemies in, then hurls them skyward |
+| Artificer | Mining, building, crafting | Three expanding rings of erupting pillars |
+| Keeper | Blocking, farming, sharing potions | An eight-second sanctum: allies regenerate and resist, enemies are slowed and worn down |
+
+### Crisis awakening (first forms)
+
+Full playstyle evidence no longer unlocks a first form by itself. The form becomes **dormant** and only wakes when a
+true rival pushes the player to the brink in a real player fight. Mobs never count.
+
+A hidden breaking-point meter fills during a fight where both players are trading hits:
+
+| Moment | Meter |
+| --- | --- |
+| A rival takes you to 3 hearts or less | +20 |
+| Your rival has a form released and you don't | +25 |
+| Each extra attacker beyond one (2v1, 3v1…) | +15 |
+| Your rival outranks you | +15 |
+| You hit back while on 3 hearts or less | +10 per hit |
+| A friend or teammate dies near you mid-fight | +20 |
+
+When the meter is full (100), the blow that would kill you is cancelled. Instead the world slows, your faction's inner
+voice speaks, and after two seconds of invulnerability the form bursts out, releasing immediately at half health. The
+whole server hears that someone has awakened, but not who.
+
+Self-moderation, since nobody has to watch:
+- **Friends don't count.** Players who spend an hour near each other without fighting, or who have ever shared a team,
+  are friends until one of them really kills the other. Bonds are saved in `bonds.yml`.
+- **Real exchanges only.** The meter only grows while you are also hitting that rival, and drains quickly out of combat.
+- **No rematch farming.** A rival who pushed you hard in a fight that ended without an awakening stops counting for 7 days.
+- **No fresh alts.** Rivals need 2 hours of playtime.
+
+Everything is tunable under `awakenings.crisis`; set `enabled: false` to unlock first forms on full evidence.
+
+### Bankai awakening (advanced forms)
+
+1. **Mastery.** Once you meet the advanced evidence and rank requirements, land 40 first-form technique hits on valid rivals and win 5 fights while your first form is released. Only one hit per rival per second and one win per rival per 24 hours count. Friendship, minimum playtime, and rematch rules still apply.
+2. **Subjugation.** With your form sealed, hold your faction starter and sneak without moving for 30 seconds. You must be alone within 24 blocks and out of PvP for 15 seconds. In the inner world, beat your spirit within five minutes by dodging telegraphed attacks from your future advanced kit. A loss (including disconnecting) returns you with two hearts, keeps your gear, and starts a 24-hour trial cooldown. A win locks in the kit and makes the advanced form dormant.
+3. **Crisis.** While you still meet the rank requirement, face a valid rival who has a form released. Unreleased opponents don't build your meter. A first-form rival grants 10 outclassed points; an advanced-form rival grants 25. If a released rival lands an otherwise lethal blow with your meter full (200 by default), you awaken instead. Your form releases immediately and the whole server hears who awakened.
+
+`/bleach awakenings` shows the current stage. Set `awakenings.bankai.enabled: false` to restore advanced unlocks on evidence and rank alone. Existing advanced forms are unaffected. Operators with `bleachsmp.admin` can use `/bleach bankai <online player> stage <NONE|MASTERING|MASTERED|SUBJUGATED>`, `/bleach bankai <online player> trial`, or `/bleach bankai <online player> reset` to test progression without grinding.
+
+### Signature moves
+
+Every form has its own signature move, used with **Q** (drop) on the starter item while released. No two forms share one:
+48 in all. Advanced forms use an empowered version: longer, wider and harder-hitting. Cooldown: 20s (14s in an advanced
+form), set by `signature-cooldown-seconds`. Signature hits get the same faction and element effects as techniques.
+
+**Soul Reaper**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| Akagetsu | Blood Moon | Mark an enemy; your hits on it heal you, and the mark bursts when it fades. |
+| Kagerō | Heat Haze Double | Leave a decoy of yourself and vanish; the decoy explodes in darkness when struck. |
+| Ryūsei | Meteor Lance | Charge, then fire a piercing lance that hits harder the farther it flies. |
+| Hayate | Updraft | A wind column flings nearby enemies up and lifts you; your next plunging hit lands hard. |
+| Iwagane | Iron Wall | Raise a wall that destroys incoming projectiles and shoves enemies back. |
+| Mamorigami | Frozen Shrine | Encase yourself in ice, invulnerable and healing, then shatter it to freeze enemies. |
+| Homuramaru | Inferno Blade | Your melee hits explode in fire for a few seconds. |
+| Oboromaru | Thousand Petals | Steer a cloud of blade petals with your crosshair. |
+| Amagumo | Rain Prison | A raincloud traps an area, slowing enemies and striking them with water bolts. |
+| Kumokiri | Thunder Step | Three lightning blinks; press Q again to step, cutting everything you pass. |
+| Iwaoni | Toxic Spire | Plant a spire that pulses poison and drags enemies toward it. |
+| Kusarigami | Bell of Binding | A bell silences nearby enemies' techniques and signatures. |
+
+**Hollow**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| Lobo Carmesí | Feral Hunt | Pay health to frenzy: speed, and every melee hit heals and stacks strength. |
+| Espejismo | Mirage Swap | Swap places with an enemy and blind it. |
+| Halcón Negro | Black Talon Cero | Root yourself and fire a huge piercing cero. |
+| Viento Hueco | Sonido Storm | Flash around a target, striking it from every side. |
+| Coloso | Magma Fist | A line of magma eruptions that launches and burns. |
+| Caparazón | Shell Reflect | A shell that reflects projectiles and punishes melee attackers. |
+| Tiburón | Shark Dive | Dive into the ground and burst up under a target. |
+| Sombra Pálida | Fading Shade | Vanish from enemy sight; your first hit out of it lands hard. |
+| Escorpión | Stinger | Shoot a stinger; the venom detonates, stronger for every hit you land meanwhile. |
+| Águila Hueca | Eagle Dive | Soar and steer through the air, then crash down with lightning. |
+| Osario | Bone Cage | Cage an enemy in bone; it cannot leave. |
+| Araña Blanca | Web of Frost | Throw a frozen web that slows enemies and shields allies. |
+
+**Quincy**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| The Assault | Blitz Volley | A rapid stream of reishi bolts that follows your aim. |
+| The Illusion | Mirror Feint | The next hit on you misses, and you strike back from behind the attacker. |
+| The Starshot | Sniper Star | Charge a 60-block shot; headshots deal extra damage. |
+| The Flight | Hirenkyaku Glide | Fly on reishi platforms for a few seconds. |
+| The Bulwark | Resonant Bastion | A dome that destroys projectiles and wears down enemies inside. |
+| The Haven | Blossom Haven | A blossom field that heals allies and pushes enemies out. |
+| The Rampage | Blood Debt | Store the damage you take, then release it in a blast that heals you. |
+| The Mirror | Mirror Theft | Steal an enemy's buffs. |
+| The Deluge | Tidal Wave | A wall of water that sweeps enemies away. |
+| The Zenith | Sunburst Halo | Orbiting suns that explode on enemies who come close. |
+| The Pillar | Pillar Vault | Ride a rising pillar, then topple it onto the enemies in front. |
+| The Tether | Soul Tether | Chain an enemy: it cannot run, and shares the damage you take. |
+
+**Fullbringer**
+
+| Form | Signature | What it does |
+| --- | --- | --- |
+| Crimson Knuckle | Charge Punch | Charge a punch (Q again to throw it); more charge, more damage. |
+| Mirror Coat | Mirror Coat | Melee attackers take back most of the damage they deal you. |
+| Bullet Echo | Echo Mark | Your next three hits echo a second later. |
+| Sky Runner | Sky Steps | Jump again and again in mid-air. |
+| Iron Maker | Iron Construct | Build an iron construct that fights for you. |
+| Heart Lock | Heart Link | Link to an ally: you share damage and both regenerate. |
+| Rewind Blade | Rewind | Mark this moment; Q again (or wait) to return to it, with your health from then. |
+| Shuffle Deck | Shuffle | Every enemy around you, and you, swap places at random. |
+| Echo Rain | Echo Turret | A floating turret that fires at nearby enemies. |
+| Meteor Boots | Meteor Kick | Dash-kick an enemy into the air and stomp it back down. |
+| Forge Ground | Molten Floor | Melt the ground: enemies burn, allies get speed and fire resistance. |
+| Lifeline | Last Line | The next lethal hit on you or a nearby ally is stopped. |
+
+### Elements
+
+Every form has an element that layers its own particles, sounds and a light on-hit effect over everything the form
+does: its techniques, impacts, aura, ultimate and release. Two forms with the same technique look and sound different.
+A form's Shikai and Bankai share an element.
+
+Elements also change how every technique plays:
+
+| Element | Look | Mechanic |
+| --- | --- | --- |
+| Fire | flames, lava sparks | burns; +20% on burning targets; leaves fire along wave, dash and beam paths |
+| Ice | snowflakes, frost rings | roots the first enemy hit (once per target every 4s); leaves frost trails |
+| Lightning | sparks, jagged arcs | arcs to 2 nearby enemies (3 in advanced forms) for 40% damage, stunning them |
+| Wind | gusts, swirling cloud | blasts enemies far away, at 85% damage |
+| Shadow | ink, black smoke | waves and beams pass through walls; +30% from behind; darkness on players |
+| Water | splashes, bubbles | drags enemies toward you |
+| Blood | crimson spores, red streaks | lifesteal: 15% of damage (25% advanced) |
+| Petal / Pale Petal | cherry or pale-oak leaves | a petal swarm keeps cutting for 3 more hits (5 advanced) |
+| Earth | rock debris, dust plumes | launches enemies with erupting rock |
+| Light | light rods, glow | marks enemies; the next hit on a mark deals +30% and consumes it |
+| Poison | green spores, slime | poison II; already-poisoned enemies start to wither; toxic trails |
+| Sound | notes, ringing rings | the hit rings out, dealing 30% to everything around the target |
+
+**Advanced forms turn the element up.** Their transformation ends in a bigger element-specific eruption (falling lightning,
+a petal cyclone, a pillar of light, a water wall…), their aura is denser, and their hits leave a two-second patch of the
+element on the ground that keeps applying its on-hit effect to enemies standing in it.
 
 ### First-form releases
 
@@ -118,9 +256,38 @@ Pillars are temporary block displays, so they never change the world. `/bleach a
 
 Press **F** again to seal the form early. It also seals on death, logout, or changing worlds. The first-form release cooldown starts once the form seals. Tune the duration, both technique cooldowns, and technique damage under `awakenings.release` in `config.yml`.
 
-Advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) remain single powerful releases, now with a faction-coloured burst, a rising helix, a shockwave, and thunder. The sealed starter abilities also have their own effects: Crescent Cut draws a pale crescent through the target, Cero Rush flashes red and leaves a soul-fire trail, Heilig Pfeil shows a reishi bow and a light trail on the arrow, and Bringer Guard surrounds the player with orbiting gold guard plates.
+### Advanced-form releases
 
-Use `/bleach awakenings` to see your total progress, rank requirements, and unlocked powers. Your next power and its trait stay hidden until you unlock it. Hold your faction starter item and press **F** (swap hands) to release your highest unlocked form. `/bleach release first` and `/bleach release advanced` let you use a specific form instead. Both forms share a release cooldown (40 seconds for first forms, 95 for advanced forms by default). Right-click still uses the original starter ability on its own cooldown. Set the advanced rank requirement and cooldowns in the `awakenings` section of `config.yml`.
+Advanced forms (Soul Reaper **Bankai**, Hollow **Segunda Etapa**, Quincy **Vollständig**, and **Complete Fullbring**) are 40-second releases built the same way as first forms, with more power:
+
+- **A two-second transformation.** A bolt of light (dark for Hollows) strikes the player, then a ten-block pillar of reiatsu rises. A nine-block shockwave and explosion follow. Nearby enemies are thrown back, and enemy players are briefly covered in Darkness. The call-out reaches players within 64 blocks.
+- **A lasting look.** Quincy grow flapping wings of light, Hollows grow bone horns over a ring of souls, Fullbringers are circled by four armour plates, and Soul Reapers give off black-and-colour reiatsu like flame.
+- **Stronger kits.** Techniques deal 40% more damage on shorter cooldowns (5 seconds, 8 for sneak), and the faction passive goes up one level. The advanced form rolls its own variant and secondary technique separately from the first form, so a player's Bankai does not simply mirror their Shikai.
+- **An ultimate on F, once per release**, set by the advanced form's playstyle (see the table above). Sneak + F seals the form early. The action bar shows whether the ultimate is ready.
+
+| Playstyle | Soul Reaper Bankai | Hollow Segunda Etapa | Quincy Vollständig | Complete Fullbring |
+| --- | --- | --- | --- | --- |
+| Vanguard | Akagetsu Tenrō / Homuramaru Gōen | Lobo Carmesí Rey / Tiburón Abisal | Sturmengel / Zornflügel | Crimson Knuckle Overdrive / Rewind Blade Zero |
+| Mirage | Kagerō Mugenkyō / Oboromaru Yumeutsutsu | Espejismo Eterno / Sombra Infinita | Spiegelengel / Trugbild | Mirror Coat Infinite / Shuffle Deck Joker |
+| Marksman | Ryūsei Gingaō / Amagumo Raiu | Halcón Negro Abismal / Escorpión Rey | Sternengel / Sintflut | Bullet Echo Arsenal / Echo Rain Storm |
+| Wayfarer | Hayate Tenkū / Kumokiri Shippū | Tormenta Hueca / Águila Tempestad | Himmelsflügel / Zenitflug | Sky Runner Ascension / Meteor Boots Impact |
+| Artificer | Iwagane Daichiō / Iwaoni Senzan | Coloso Titán / Osario Imperial | Bollwerkengel / Säulenthron | Iron Maker Foundry / Forge Ground Colossus |
+| Keeper | Mamorigami Kekkaiden / Kusarigami Shinbaku | Caparazón Sagrado / Araña Reina | Heiligenschein / Bandengel | Heart Lock Sanctuary / Lifeline Eternal |
+
+| Ultimate | Soul Reaper | Hollow | Quincy | Fullbringer |
+| --- | --- | --- | --- | --- |
+| Vanguard | Heaven-Rending Moon | Desgarro Final | Heiliges Gericht | Final Knuckle |
+| Mirage | Thousand Mirage Execution | Ejecución Fantasma | Phantomhinrichtung | Grand Shuffle |
+| Marksman | Galaxy Fall | Lluvia del Abismo | Sternenflut | Full Clip Storm |
+| Wayfarer | Divine Tempest | Huracán Hueco | Himmelssturm | Stratosphere Drop |
+| Artificer | World Breaker | Fin del Mundo | Weltbrecher | Foundry Quake |
+| Keeper | Sanctum of Light | Santuario Vacío | Lichtdom | Lifeline Sanctuary |
+
+Tune the advanced duration, technique cooldowns, and power under `awakenings.advanced-release` in `config.yml`.
+
+The sealed starter abilities also have their own effects: Crescent Cut draws a pale crescent through the target, Cero Rush flashes red and leaves a soul-fire trail, Heilig Pfeil shows a reishi bow and a light trail on the arrow, and Bringer Guard surrounds the player with orbiting gold guard plates.
+
+Use `/bleach awakenings` to see your total progress, rank requirements, and unlocked powers. Your next power and its trait stay hidden until you unlock it. Hold your faction starter item and press **F** (swap hands) to release your highest unlocked form. `/bleach release first` and `/bleach release advanced` let you use a specific form instead. Both forms share a release cooldown that starts when the form seals (40 seconds for first forms, 95 for advanced forms by default). While no form is released, right-click uses the original starter ability on its own cooldown. Set the advanced rank requirement and cooldowns in the `awakenings` section of `config.yml`.
 
 ## First abilities
 

@@ -65,6 +65,36 @@ awakenings:
   advanced-unlock-rank: 2
   first-cooldown-seconds: 40
   advanced-cooldown-seconds: 95
+  # Set enabled: false to unlock advanced forms on evidence and rank instead of mastery, trial and crisis.
+  bankai:
+    enabled: true
+    mastery-hits: 40
+    mastery-wins: 5
+    meditation-seconds: 30
+    inner-world-name: bleachsmp_inner
+    spirit-health: 120
+    trial-minutes: 5
+    trial-cooldown-hours: 24
+  # Crisis awakening: once a player's playstyle evidence is full, their first form is dormant. It only wakes when
+  # a real rival pushes them to the brink: a hidden meter fills during genuine player fights (low health, being
+  # outclassed, outnumbered or outranked, fighting back, an ally falling), and once it is full the blow that would
+  # kill them awakens the form instead. Players who spend friend-minutes near each other without fighting, or who
+  # have shared a team, are friends and cannot push each other's meter until one of them really kills the other.
+  # Set enabled: false to unlock first forms as soon as the evidence is full.
+  crisis:
+    enabled: true
+    meter-goal: 100
+    bankai-meter-goal: 200
+    # Chance that a full meter turns the killing blow into an awakening.
+    trigger-chance: 1.0
+    # Health (in half-hearts) that counts as being on the brink.
+    low-health: 6.0
+    friend-radius: 32
+    friend-minutes: 60
+    # An opponent who pushed hard in a fight that ended without an awakening counts again after this long.
+    rematch-cooldown-days: 7
+    # Opponents with less total playtime than this never count (stops fresh alt accounts).
+    opponent-min-playtime-minutes: 120
   # First forms (Shikai, Resurrección, Schrift, Awakened Fullbring) are timed releases. While one is out,
   # the starter item's right-click uses the form's technique. first-cooldown-seconds starts when it seals.
   release:
@@ -72,7 +102,18 @@ awakenings:
     technique-cooldown-seconds: 6
     # Sneak + right-click technique.
     secondary-technique-cooldown-seconds: 10
+    # Q: the form's signature move.
+    signature-cooldown-seconds: 20
     damage-multiplier: 1.0
+  # Advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) are longer, stronger releases with a
+  # once-per-release ultimate on F. advanced-cooldown-seconds starts when they seal. damage-multiplier above
+  # applies to both tiers; power multiplies advanced technique and ultimate damage on top of it.
+  advanced-release:
+    duration-seconds: 40
+    technique-cooldown-seconds: 5
+    secondary-technique-cooldown-seconds: 8
+    signature-cooldown-seconds: 14
+    power: 1.4
 
 abilities:
   SOUL_REAPER:

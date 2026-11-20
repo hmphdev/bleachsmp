@@ -29,6 +29,10 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
             @NotNull String[] args) {
+        if (args.length > 0 && args[0].equalsIgnoreCase("bankai")) {
+            plugin.awakenings().bankai().command(sender, args);
+            return true;
+        }
         if (args.length > 0 && args[0].equalsIgnoreCase("boss")) {
             handleBossCommand(sender, args);
             return true;
@@ -81,7 +85,12 @@ public final class BleachCommand implements CommandExecutor, TabCompleter {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
             @NotNull String alias, @NotNull String[] args) {
         if (args.length == 1) {
-            return matching(List.of("status", "choose", "awakenings", "release", "garganta", "boss"), args[0]);
+            return matching(sender.hasPermission("bleachsmp.admin")
+                    ? List.of("status", "choose", "awakenings", "release", "garganta", "boss", "bankai")
+                    : List.of("status", "choose", "awakenings", "release", "garganta", "boss"), args[0]);
+        }
+        if (args.length > 1 && args[0].equalsIgnoreCase("bankai")) {
+            return plugin.awakenings().bankai().complete(sender, args);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("release")) {
             return matching(List.of("first", "advanced"), args[1]);
