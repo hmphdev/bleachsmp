@@ -65,9 +65,9 @@ awakenings:
   advanced-unlock-rank: 2
   first-cooldown-seconds: 40
   advanced-cooldown-seconds: 95
-  # Soul Reaper Shikai is a timed release. While it is out, the starter item's right-click
-  # uses the zanpakutō's technique instead of Crescent Cut. first-cooldown-seconds starts when it seals.
-  shikai:
+  # First forms (Shikai, Resurrección, Schrift, Awakened Fullbring) are timed releases. While one is out,
+  # the starter item's right-click uses the form's technique. first-cooldown-seconds starts when it seals.
+  release:
     duration-seconds: 30
     technique-cooldown-seconds: 6
     damage-multiplier: 1.0

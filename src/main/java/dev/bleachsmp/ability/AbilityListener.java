@@ -2,6 +2,10 @@ package dev.bleachsmp.ability;
 
 import dev.bleachsmp.BleachSmpPlugin;
 import dev.bleachsmp.faction.Faction;
+import dev.bleachsmp.fx.Vfx;
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.scheduler.BukkitRunnable;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
@@ -27,6 +31,10 @@ import org.bukkit.util.Vector;
 public final class AbilityListener implements Listener {
     private final BleachSmpPlugin plugin;
     private final NamespacedKey cooldownReadyAtKey;
+    private static final Color CRESCENT = Color.fromRGB(190, 215, 255);
+    private static final Color CERO = Color.fromRGB(210, 20, 35);
+    private static final Color REISHI = Color.fromRGB(120, 190, 255);
+    private static final Color GUARD = Color.fromRGB(255, 205, 70);
 
     public AbilityListener(BleachSmpPlugin plugin) {
         this.plugin = plugin;
@@ -52,11 +60,12 @@ public final class AbilityListener implements Listener {
             return;
         }
 
-        // A released Shikai replaces the sealed ability with its zanpakutō technique, at any rank.
-        var shikai = plugin.awakenings().shikai();
-        if (shikai.isActive(player)) {
+        // A released first form (Shikai, Resurrección, Schrift, Fullbring) replaces the sealed ability
+        // with its technique, at any rank.
+        var releases = plugin.awakenings().releases();
+        if (releases.isActive(player)) {
             event.setCancelled(true);
-            shikai.useTechnique(player);
+            releases.useTechnique(player);
             return;
         }
 
@@ -117,8 +126,17 @@ public final class AbilityListener implements Listener {
         }
         living.damage(plugin.getConfig().getDouble("abilities.SOUL_REAPER.damage", 6.0), player);
         living.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 0, false, true, true));
-        player.getWorld().spawnParticle(Particle.SWEEP_ATTACK, living.getLocation().add(0, 1, 0), 1);
+        Location hit = living.getLocation().add(0, living.getHeight() * 0.6, 0);
+        Vector facing = player.getLocation().getDirection().setY(0);
+        // A pale crescent drawn through the target, with a spark of reiatsu on impact.
+        Vfx.arc(hit, facing, 1.4, CRESCENT, 1.4f, 0.25);
+        Vfx.arc(hit, facing, 1.1, Color.WHITE, 0.9f, 0.25);
+        player.getWorld().spawnParticle(Particle.SWEEP_ATTACK, hit, 1);
+        player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, hit, 10, 0.3, 0.3, 0.3, 0.2);
+        player.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, hit, 6, 0.2, 0.2, 0.2, 0.05);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.8f, 1.2f);
+        player.getWorld().playSound(hit, Sound.ENTITY_PLAYER_ATTACK_STRONG, 0.8f, 1.1f);
+        player.getWorld().playSound(hit, Sound.BLOCK_AMETHYST_BLOCK_HIT, 0.7f, 1.6f);
         player.sendMessage(Component.text("Crescent Cut!", NamedTextColor.WHITE));
         return true;
     }
@@ -130,8 +148,16 @@ public final class AbilityListener implements Listener {
         }
         double strength = Math.max(0.1, plugin.getConfig().getDouble("abilities.HOLLOW.lunge-strength", 1.35));
         player.setVelocity(direction.multiply(strength).setY(0.25));
-        player.getWorld().spawnParticle(Particle.CRIT, player.getLocation().add(0, 1, 0), 12, 0.35, 0.35, 0.35, 0.1);
-        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_RAVAGER_ROAR, 0.6f, 1.7f);
+        Location start = player.getLocation();
+        // A red cero flash at the mask, a burst ring at the feet, and a trail of soul fire behind the lunge.
+        Vfx.burst(player.getEyeLocation().add(direction.clone().normalize().multiply(0.6)), CERO, 18, 0.15, 1.8f);
+        Vfx.ring(start.clone().add(0, 0.1, 0), 1.0, 16, CERO, 1.2f);
+        player.getWorld().spawnParticle(Particle.CRIT, start.clone().add(0, 1, 0), 12, 0.35, 0.35, 0.35, 0.1);
+        player.getWorld().spawnParticle(Particle.LARGE_SMOKE, start.clone().add(0, 0.3, 0), 6, 0.3, 0.1, 0.3, 0.02);
+        Vfx.trail(plugin, player, CERO, Particle.SOUL_FIRE_FLAME, 10);
+        player.getWorld().playSound(start, Sound.ENTITY_RAVAGER_ROAR, 0.6f, 1.7f);
+        player.getWorld().playSound(start, Sound.ENTITY_WARDEN_SONIC_CHARGE, 0.5f, 2.0f);
+        player.getWorld().playSound(start, Sound.ENTITY_BREEZE_WIND_BURST, 0.6f, 0.8f);
         player.sendMessage(Component.text("Cero Rush!", NamedTextColor.RED));
         return true;
     }
@@ -144,8 +170,17 @@ public final class AbilityListener implements Listener {
         arrow.setPickupStatus(Arrow.PickupStatus.DISALLOWED);
         arrow.setDamage(Math.max(0.0, plugin.getConfig().getDouble("abilities.QUINCY.arrow-damage", 7.0)));
         arrow.setCritical(true);
-        player.getWorld().spawnParticle(Particle.END_ROD, player.getEyeLocation(), 8, 0.1, 0.1, 0.1, 0.02);
+        Location eye = player.getEyeLocation();
+        // A reishi bow flash in front of the archer and a blue light trail behind the arrow.
+        Vector side = direction.clone().getCrossProduct(new Vector(0, 1, 0));
+        side = side.lengthSquared() < 0.01 ? new Vector(1, 0, 0) : side.normalize();
+        Location bow = eye.clone().add(direction.clone().normalize().multiply(0.8));
+        Vfx.line(bow.clone().add(side.clone().multiply(-0.6)).add(0, 0.5, 0),
+                bow.clone().add(side.clone().multiply(0.6)).add(0, -0.5, 0), REISHI, 0.8f, 0.15);
+        player.getWorld().spawnParticle(Particle.END_ROD, eye, 8, 0.1, 0.1, 0.1, 0.02);
+        Vfx.trail(plugin, arrow, REISHI, Particle.END_ROD, 80);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ARROW_SHOOT, 0.8f, 1.5f);
+        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.8f, 1.8f);
         player.sendMessage(Component.text("Heilig Pfeil!", NamedTextColor.AQUA));
         return true;
     }
@@ -158,6 +193,29 @@ public final class AbilityListener implements Listener {
         player.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0),
                 18, 0.5, 0.7, 0.5, 0.05);
         player.getWorld().playSound(player.getLocation(), Sound.ITEM_TOTEM_USE, 0.6f, 1.6f);
+        player.getWorld().playSound(player.getLocation(), Sound.ITEM_SHIELD_BLOCK, 1.0f, 0.8f);
+        player.getWorld().playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 0.8f, 1.2f);
+        // Three gold guard plates orbit the player for the length of the Resistance.
+        new BukkitRunnable() {
+            int tick;
+
+            @Override
+            public void run() {
+                if (!player.isOnline() || player.isDead() || tick > duration * 20) {
+                    cancel();
+                    return;
+                }
+                Location base = player.getLocation().add(0, 1.0, 0);
+                for (int plate = 0; plate < 3; plate++) {
+                    double a = tick * 0.18 + plate * (Math.PI * 2 / 3);
+                    for (double h = -0.4; h <= 0.41; h += 0.4) {
+                        base.getWorld().spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 1.0, h,
+                                Math.sin(a) * 1.0), 1, 0, 0, 0, 0, Vfx.dust(GUARD, 1.1f));
+                    }
+                }
+                tick += 2;
+            }
+        }.runTaskTimer(plugin, 0L, 2L);
         player.sendMessage(Component.text("Bringer Guard!", NamedTextColor.LIGHT_PURPLE));
         return true;
     }

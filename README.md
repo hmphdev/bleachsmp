@@ -56,22 +56,31 @@ Your first form unlocks automatically at 36 evidence **at any rank**. Advanced f
 | Artificer | Mining, building, crafting | **Stone Resonance** (Haste and Night Vision) → **Living Forge** (Haste II, Night Vision, and Absorption) |
 | Keeper | Blocking, farming, sharing potions | **Warding Pulse** (Absorption) → **Sanctuary** (Regeneration and Resistance). Both also buff nearby scoreboard teammates. |
 
-### Soul Reaper Shikai
+### First-form releases
 
-A Soul Reaper's first form is a true Shikai: a 30-second release instead of a single move. The playstyle that unlocked it decides which zanpakutō awakens. Releasing it calls out the zanpakutō's command to nearby players, shows its name on screen, and bursts spiritual pressure that pushes nearby enemies back. A countdown boss bar and a coloured reiatsu aura stay up while it is released, and the player gains Speed I.
+Every faction's first form is a 30-second release rather than a single move: Soul Reaper **Shikai**, Hollow **Resurrección**, Quincy **Schrift**, and **Awakened Fullbring**. The playstyle that unlocked the form decides which one awakens. Releasing calls out its command to nearby players, shows its name on screen, plays the faction's release animation and sounds, and bursts spiritual pressure that pushes nearby enemies back. A countdown boss bar and a coloured aura stay up while it is released.
 
-While Shikai is released, right-clicking the starter item uses the zanpakutō's technique in place of Crescent Cut, at any rank, on a 6-second cooldown:
+| Faction | Release animation | Passive while released | Technique hits also… |
+| --- | --- | --- | --- |
+| Soul Reaper | Rising three-strand reiatsu helix | Speed I | Slow the target |
+| Hollow | Soul-fire column, smoke, and a roar | Resistance I | Wither the target and heal you |
+| Quincy | Descending halo and pillars of light | Jump Boost II | Mark the target with Glowing |
+| Fullbringer | Enchant glyphs converging on the hand, then a totem burst | Haste I | Weaken the target |
 
-| Style | Release command | Technique |
-| --- | --- | --- |
-| Vanguard | "Howl, Akagetsu!" | **Crimson Fang**: a crescent wave of red reiatsu that tears through everything in its path |
-| Mirage | "Deceive, Kagerō!" | **Haze Step**: vanish and strike from behind a target up to 12 blocks away, blinding it |
-| Marksman | "Pierce, Ryūsei!" | **Falling Star**: a long-range blade of light that bursts on impact |
-| Wayfarer | "Soar, Hayate!" | **Gale Passage**: dash forward on a gale, cutting every enemy you pass |
-| Artificer | "Crush, Iwagane!" | **Mountain Breaker**: slam the ground and hurl nearby enemies skyward |
-| Keeper | "Shelter, Mamorigami!" | **Shrine Ward**: heal and shield yourself and teammates while driving enemies back |
+While released, right-clicking the starter item uses the form's technique in place of the sealed ability, at any rank, on a 6-second cooldown. Each playstyle has its own technique, styled per faction:
 
-Press **F** again to seal the Shikai early. It also seals on death, logout, or changing worlds. The first-form release cooldown starts once the Shikai seals. Tune the duration, technique cooldown, and technique damage under `awakenings.shikai` in `config.yml`.
+| Style | Technique | Soul Reaper | Hollow | Quincy | Fullbringer |
+| --- | --- | --- | --- | --- | --- |
+| Vanguard | A cutting wave that tears forward | "Howl, Akagetsu!" — Crimson Fang | "Desgarra, Lobo Carmesí!" — Garra Roja (triple claw) | "Schrift A — The Assault!" — Heiliger Sturm | "Fullbring: Crimson Knuckle!" — Knuckle Breaker |
+| Mirage | Blink behind a target up to 12 blocks away and strike, blinding it | "Deceive, Kagerō!" — Haze Step | "Engaña, Espejismo!" — Sonido Fantasma | "Schrift I — The Illusion!" — Schattenschritt | "Fullbring: Mirror Coat!" — Reflection Swap |
+| Marksman | A long-range blast that bursts on impact | "Pierce, Ryūsei!" — Falling Star | "Dispara, Halcón Negro!" — Cero Oscuro (wider, faster) | "Schrift S — The Starshot!" — Sternregen | "Fullbring: Bullet Echo!" — Echo Shot |
+| Wayfarer | Dash forward, cutting every enemy you pass | "Soar, Hayate!" — Gale Passage | "Corre, Viento Hueco!" — Embestida | "Schrift F — The Flight!" — Lichtsprung | "Fullbring: Sky Runner!" — Ground Skip |
+| Artificer | Slam the ground and hurl nearby enemies skyward | "Crush, Iwagane!" — Mountain Breaker | "Aplasta, Coloso!" — Terremoto | "Schrift B — The Bulwark!" — Erdbrecher | "Fullbring: Iron Maker!" — Forge Quake |
+| Keeper | Heal and shield you and teammates, driving enemies back | "Shelter, Mamorigami!" — Shrine Ward | "Protege, Caparazón!" — Coraza Viva | "Schrift H — The Haven!" — Lichtschild | "Fullbring: Heart Lock!" — Locket Ward |
+
+Press **F** again to seal the form early. It also seals on death, logout, or changing worlds. The first-form release cooldown starts once the form seals. Tune the duration, technique cooldown, and technique damage under `awakenings.release` in `config.yml`.
+
+Advanced forms (Bankai, Segunda Etapa, Vollständig, Complete Fullbring) remain single powerful releases, now with a faction-coloured burst, a rising helix, a shockwave, and thunder. The sealed starter abilities also have their own effects: Crescent Cut draws a pale crescent through the target, Cero Rush flashes red and leaves a soul-fire trail, Heilig Pfeil shows a reishi bow and a light trail on the arrow, and Bringer Guard surrounds the player with orbiting gold guard plates.
 
 Use `/bleach awakenings` to see your total progress, rank requirements, and unlocked powers. Your next power and its trait stay hidden until you unlock it. Hold your faction starter item and press **F** (swap hands) to release your highest unlocked form. `/bleach release first` and `/bleach release advanced` let you use a specific form instead. Both forms share a release cooldown (40 seconds for first forms, 95 for advanced forms by default). Right-click still uses the original starter ability on its own cooldown. Set the advanced rank requirement and cooldowns in the `awakenings` section of `config.yml`.
 

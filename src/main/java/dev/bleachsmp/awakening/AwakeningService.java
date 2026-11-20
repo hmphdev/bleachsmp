@@ -22,7 +22,7 @@ import org.bukkit.potion.PotionEffectType;
 public final class AwakeningService {
     private final BleachSmpPlugin plugin;
     private final AwakeningPowers powers;
-    private final ShikaiService shikai;
+    private final ReleaseService releases;
     private final NamespacedKey firstKey;
     private final NamespacedKey advancedKey;
     private final NamespacedKey firstTraitKey;
@@ -35,8 +35,8 @@ public final class AwakeningService {
 
     public AwakeningService(BleachSmpPlugin plugin) {
         this.plugin = plugin;
-        powers = new AwakeningPowers(this);
-        shikai = new ShikaiService(plugin, this);
+        powers = new AwakeningPowers(plugin, this);
+        releases = new ReleaseService(plugin, this);
         firstKey = new NamespacedKey(plugin, "first_awakening");
         advancedKey = new NamespacedKey(plugin, "advanced_awakening");
         firstTraitKey = new NamespacedKey(plugin, "first_awakening_trait");
@@ -50,8 +50,8 @@ public final class AwakeningService {
         }
     }
 
-    public ShikaiService shikai() {
-        return shikai;
+    public ReleaseService releases() {
+        return releases;
     }
 
     boolean canStrike(Player caster, LivingEntity target) {
@@ -190,8 +190,8 @@ public final class AwakeningService {
                     NamedTextColor.YELLOW));
             return;
         }
-        if (shikai.seal(player, true)) {
-            // Pressing release again while Shikai is out seals it early; the release cooldown starts now.
+        if (releases.seal(player, true)) {
+            // Pressing release again while a first form is out seals it early; the release cooldown starts now.
             player.getPersistentDataContainer().set(releaseReadyKey, PersistentDataType.LONG,
                     System.currentTimeMillis() + releaseCooldown(false) * 1000L);
             return;
@@ -217,17 +217,17 @@ public final class AwakeningService {
             return;
         }
         Playstyle trait = storedStyle(player, advanced ? advancedTraitKey : firstTraitKey);
-        if (faction == Faction.SOUL_REAPER && !advanced) {
-            shikai.release(player, style);
+        if (!advanced) {
+            releases.release(player, faction, style);
             if (trait != null) {
                 AwakeningPowers.applyTrait(player, trait);
             }
-            // The release cooldown starts once the Shikai would end on its own.
+            // The release cooldown starts once the form would seal on its own.
             data.set(releaseReadyKey, PersistentDataType.LONG,
-                    now + (shikai.durationSeconds() + releaseCooldown(false)) * 1000L);
+                    now + (releases.durationSeconds() + releaseCooldown(false)) * 1000L);
             return;
         }
-        if (!powers.cast(player, style, advanced)) {
+        if (!powers.cast(player, faction, style, advanced)) {
             return;
         }
         if (trait != null) {
@@ -244,13 +244,11 @@ public final class AwakeningService {
     }
 
     private static String powerName(Faction faction, Playstyle style, boolean advanced) {
-        return faction == Faction.SOUL_REAPER && !advanced
-                ? ShikaiService.bladeName(style) : AwakeningPowers.name(style, advanced);
+        return !advanced ? ReleaseService.form(faction, style).name() : AwakeningPowers.name(style, advanced);
     }
 
     private static String powerDescription(Faction faction, Playstyle style, boolean advanced) {
-        return faction == Faction.SOUL_REAPER && !advanced
-                ? ShikaiService.description(style) : AwakeningPowers.description(style, advanced);
+        return !advanced ? ReleaseService.description(faction, style) : AwakeningPowers.description(style, advanced);
     }
 
     boolean holdsStarter(Player player) {
@@ -334,7 +332,7 @@ public final class AwakeningService {
         return Math.clamp(plugin.getConfig().getInt("awakenings.advanced-unlock-rank", 2), 1, 5);
     }
 
-    private static String formName(Faction faction, boolean advanced) {
+    static String formName(Faction faction, boolean advanced) {
         return switch (faction) {
             case SOUL_REAPER -> advanced ? "Bankai" : "Shikai";
             case HOLLOW -> advanced ? "Segunda Etapa" : "Resurrección";
