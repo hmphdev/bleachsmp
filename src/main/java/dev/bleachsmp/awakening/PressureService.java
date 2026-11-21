@@ -4,9 +4,11 @@ import dev.bleachsmp.BleachSmpPlugin;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import dev.bleachsmp.faction.Faction;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -146,6 +148,9 @@ public final class PressureService implements Listener {
             weaker.sendMessage(Component.text(stronger.getName() + "'s reiatsu weighs on you. You'll adapt in "
                     + setting("adapt-seconds", 10) + "s.", NamedTextColor.DARK_GRAY, TextDecoration.ITALIC));
             weaker.playSound(weaker.getLocation(), Sound.BLOCK_BEACON_AMBIENT, 0.8f, 0.5f);
+            if (vfx()) {
+                PressureFx.edgeLands(plugin, weaker, stronger, color(stronger));
+            }
         }
     }
 
@@ -169,9 +174,35 @@ public final class PressureService implements Listener {
                 state[1] = 1;
                 weaker.sendMessage(Component.text("You've adapted to " + stronger.getName() + "'s reiatsu.",
                         NamedTextColor.GRAY, TextDecoration.ITALIC));
+                if (vfx()) {
+                    PressureFx.adapted(weaker, color(weaker));
+                }
             }
         }
+        if (vfx()) {
+            showEdges(now);
+        }
         sense(now);
+    }
+
+    /** Once a second, the weight still on each weaker fighter. */
+    private void showEdges(long now) {
+        for (String key : fights.keySet()) {
+            String[] ids = key.split("\\|");
+            Player a = plugin.getServer().getPlayer(UUID.fromString(ids[0]));
+            Player b = plugin.getServer().getPlayer(UUID.fromString(ids[1]));
+            if (a == null || b == null || !active(a) || !active(b)) {
+                continue;
+            }
+            double onA = weight(a, b, now);
+            double onB = weight(b, a, now);
+            if (onA > 0) {
+                PressureFx.edgeHolds(a, color(b), onA);
+            }
+            if (onB > 0) {
+                PressureFx.edgeHolds(b, color(a), onB);
+            }
+        }
     }
 
     // ---- Sensing ----
@@ -226,6 +257,9 @@ public final class PressureService implements Listener {
         if (difference >= 5) {
             observer.playSound(observer.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 0.8f, 0.6f);
         }
+        if (vfx()) {
+            PressureFx.sensed(observer, source, color(source), difference);
+        }
     }
 
     private static String direction(Player observer, Player source) {
@@ -246,6 +280,9 @@ public final class PressureService implements Listener {
             if (since != null && !service.releases().isActive(player)
                     && System.currentTimeMillis() - since >= setting("suppress-seconds", 3) * 1000L) {
                 player.sendActionBar(Component.text("Your reiatsu returns.", NamedTextColor.GRAY));
+                if (vfx() && plugin.getFaction(player.getUniqueId()) != null) {
+                    PressureFx.returned(player, color(player));
+                }
             }
             return;
         }
@@ -255,6 +292,9 @@ public final class PressureService implements Listener {
             if (enabled() && sneakingSince.getOrDefault(player.getUniqueId(), 0L) == start && suppressed(player)) {
                 player.sendActionBar(Component.text("Reiatsu suppressed.", NamedTextColor.DARK_GRAY,
                         TextDecoration.ITALIC));
+                if (vfx() && plugin.getFaction(player.getUniqueId()) != null) {
+                    PressureFx.suppressed(player, color(player));
+                }
             }
         }, setting("suppress-seconds", 3) * 20L + 1);
     }
@@ -288,6 +328,28 @@ public final class PressureService implements Listener {
     private static String key(Player a, Player b) {
         return a.getUniqueId().compareTo(b.getUniqueId()) < 0
                 ? a.getUniqueId() + "|" + b.getUniqueId() : b.getUniqueId() + "|" + a.getUniqueId();
+    }
+
+    /** The colour of a player's reiatsu: their released form's, or their faction's while sealed. */
+    Color color(Player player) {
+        var release = service.releases().get(player);
+        if (release != null) {
+            return release.form.color();
+        }
+        Faction faction = plugin.getFaction(player.getUniqueId());
+        if (faction == null) {
+            return Color.fromRGB(170, 170, 180);
+        }
+        return switch (faction) {
+            case SOUL_REAPER -> Color.fromRGB(190, 215, 255);
+            case HOLLOW -> Color.fromRGB(210, 40, 55);
+            case QUINCY -> Color.fromRGB(90, 190, 255);
+            case FULLBRINGER -> Color.fromRGB(185, 110, 255);
+        };
+    }
+
+    private boolean vfx() {
+        return plugin.getConfig().getBoolean("pressure.vfx", true);
     }
 
     private boolean enabled() {
