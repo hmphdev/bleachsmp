@@ -512,7 +512,8 @@ public final class CanonMoves implements Listener {
     }
 
     private static void effect(LivingEntity entity, PotionEffectType type, int ticks, int amplifier) {
-        entity.addPotionEffect(new PotionEffect(type, ticks, amplifier, false, true, true));
+        // Buffs stay quiet: the form's effect models already show them, and their swirl hides the models.
+        entity.addPotionEffect(new PotionEffect(type, ticks, amplifier, false, !GOOD.contains(type), true));
     }
 
     /** Holds an entity in place: no walking, no jumping. */
@@ -1797,6 +1798,10 @@ public final class CanonMoves implements Listener {
         BlockDisplay body = block(p.getLocation(), Material.NETHERITE_BLOCK, 3.2f, 5.0f, 2.0f);
         BlockDisplay head = block(p.getLocation(), Material.IRON_BLOCK, 1.6f, 1.6f, 1.6f);
         BlockDisplay blade = block(p.getLocation(), Material.IRON_BLOCK, 0.4f, 7f, 0.4f);
+        // Resource-pack players see the armoured giant model instead (MoveFx).
+        Vfx.hideFromModelViewers(body);
+        Vfx.hideFromModelViewers(head);
+        Vfx.hideFromModelViewers(blade);
         Vfx.sound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_NETHERITE, 1.0f, 0.4f);
         Vfx.sound(p.getLocation(), Sound.ENTITY_WARDEN_EMERGE, 1.0f, 0.8f);
         every(p, ticks, 2, tick -> {
@@ -1806,7 +1811,9 @@ public final class CanonMoves implements Listener {
                 remove(blade);
                 return;
             }
-            Location base = p.getLocation().subtract(flat(p).multiply(3)).add(0, 0.5, 0);
+            // Behind and to the right, clear of a third-person camera.
+            Vector side = flat(p).crossProduct(new Vector(0, 1, 0)).normalize();
+            Location base = p.getLocation().subtract(flat(p).multiply(2)).add(side.multiply(4)).add(0, 0.5, 0);
             body.teleport(base);
             head.teleport(base.clone().add(0, 5.0, 0));
             blade.teleport(base.clone().add(flat(p).crossProduct(new Vector(0, 1, 0)).normalize().multiply(2.2)));

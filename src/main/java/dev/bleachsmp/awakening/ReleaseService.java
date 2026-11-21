@@ -228,11 +228,14 @@ public final class ReleaseService implements Listener {
     private final BleachSmpPlugin plugin;
     private final AwakeningService service;
     private final Map<UUID, Release> active = new HashMap<>();
+    /** The admin effect preview's pick of kit for a player's next release. */
+    final Map<UUID, Canon.Kit> previewKits = new HashMap<>();
     private final Set<BlockDisplay> displays = new HashSet<>();
 
     ReleaseService(BleachSmpPlugin plugin, AwakeningService service) {
         this.plugin = plugin;
         this.service = service;
+        KitFx.init(plugin, this);
     }
 
     Release get(Player player) {
@@ -268,7 +271,8 @@ public final class ReleaseService implements Listener {
     void release(Player player, Faction faction, Playstyle style, Playstyle trait, boolean advanced) {
         seal(player, false);
         UUID id = player.getUniqueId();
-        Canon.Kit kit = kit(id, faction, style);
+        Canon.Kit forced = previewKits.remove(id);
+        Canon.Kit kit = forced != null && forced.faction() == faction ? forced : kit(id, faction, style);
         Form form = form(kit, advanced);
         Theme theme = Theme.of(faction);
         long now = System.currentTimeMillis();
@@ -314,7 +318,7 @@ public final class ReleaseService implements Listener {
                     entity.setVelocity(outward(loc, entity).multiply(0.9).setY(0.35));
                 }
             }
-            releaseAnimation(player, form, theme);
+            releaseAnimation(player, release, form, theme);
         }
 
         // The element erupts as the release completes: after the faction animation, or at the peak of the entrance.
@@ -395,24 +399,10 @@ public final class ReleaseService implements Listener {
     }
 
     /** The first second after a release: each faction gets its own rising effect. */
-    private void releaseAnimation(Player player, Form form, Theme theme) {
-        player.getWorld().spawnParticle(Particle.SONIC_BOOM, player.getLocation().add(0, 1, 0), 1);
-        Location start = player.getLocation();
-        switch (theme) {
-            case SOUL_REAPER -> {
-                Vfx.helix(plugin, player, form.color(), 20, 3, 1.1);
-                Vfx.pillar(start, form.color(), 1.3, 4.5, 10, 8);
-            }
-            case HOLLOW -> Vfx.pillar(start, Color.fromRGB(40, 20, 52), 1.7, 3.6, 8, 10);
-            case QUINCY -> {
-                // Six shafts of light around the archer.
-                for (int i = 0; i < 6; i++) {
-                    double a = i * (Math.PI / 3);
-                    Vfx.pillar(start.clone().add(Math.cos(a) * 1.8, 0, Math.sin(a) * 1.8), form.color(), .28, 3.4, 14, 6);
-                }
-            }
-            case FULLBRINGER -> Vfx.helix(plugin, player, form.color(), 20, 4, 1.6);
-        }
+    private void releaseAnimation(Player player, Release release, Form form, Theme theme) {
+        Vfx.fallbackParticle(player.getLocation().add(0, 1, 0), Particle.SONIC_BOOM, 1, 0, 0);
+        // The kit's own release, in effect models; the faction's particle animation below plays for everyone else.
+        KitFx.release(player, release);
         new BukkitRunnable() {
             int tick;
 
@@ -428,33 +418,29 @@ public final class ReleaseService implements Listener {
                     case SOUL_REAPER -> {
                         for (int strand = 0; strand < 3; strand++) {
                             double a = tick * 0.6 + strand * (Math.PI * 2 / 3);
-                            world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 1.1, tick * 0.15,
-                                    Math.sin(a) * 1.1), 2, 0.02, 0.02, 0.02, 0, form.dust(1.6f));
+                            Vfx.fallbackDust(base.clone().add(Math.cos(a) * 1.1, tick * 0.15, Math.sin(a) * 1.1),
+                                    form.dust(1.6f));
                         }
                     }
                     case HOLLOW -> {
-                        if (tick % 2 == 0) {
-                            // Soul-fire licking up around the feet.
-                            ThreadLocalRandom random = ThreadLocalRandom.current();
-                            double a = random.nextDouble(Math.PI * 2);
-                            Vfx.flame(base.clone().add(Math.cos(a) * .7, 0, Math.sin(a) * .7),
-                                    tick % 4 == 0 ? form.color() : Color.fromRGB(90, 200, 230), 1.4 + random.nextDouble(), 12);
-                        }
                         world.spawnParticle(Particle.SOUL_FIRE_FLAME, base.clone().add(0, tick * 0.12, 0), 6,
                                 0.45, 0.2, 0.45, 0.02);
                         world.spawnParticle(Particle.LARGE_SMOKE, base.clone().add(0, 0.4, 0), 2, 0.6, 0.2, 0.6, 0.01);
                         double r = 1.6 - tick * 0.06;
                         for (int s = 0; s < 2; s++) {
                             double a = tick * 0.8 + s * Math.PI;
-                            world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * r, 1.0, Math.sin(a) * r),
-                                    3, 0.03, 0.3, 0.03, 0, form.dust(1.7f));
+                            Vfx.fallbackDust(base.clone().add(Math.cos(a) * r, 1.0, Math.sin(a) * r), form.dust(1.7f));
                         }
                         if (tick % 5 == 0) {
                             world.spawnParticle(Particle.SCULK_SOUL, base.clone().add(0, 1.2, 0), 4, 0.4, 0.4, 0.4, 0.05);
                         }
                     }
                     case QUINCY -> {
-                        Vfx.ring(base.clone().add(0, 2.6 - tick * 0.05, 0), 0.55, 14, form.color(), 1.0f);
+                        for (int p = 0; p < 14; p++) {
+                            double a = p * (Math.PI / 7);
+                            Vfx.fallbackDust(base.clone().add(Math.cos(a) * .55, 2.6 - tick * 0.05, Math.sin(a) * .55),
+                                    form.dust(1.0f));
+                        }
                         for (int p = 0; p < 6; p++) {
                             double a = p * (Math.PI / 3);
                             world.spawnParticle(Particle.END_ROD, base.clone().add(Math.cos(a) * 1.8, tick * 0.13,
@@ -467,13 +453,10 @@ public final class ReleaseService implements Listener {
                         double r = 2.2 - tick * 0.1;
                         for (int s = 0; s < 4; s++) {
                             double a = tick * 0.5 + s * (Math.PI / 2);
-                            world.spawnParticle(Particle.DUST, hand.clone().add(Math.cos(a) * r, Math.sin(tick * 0.3) * 0.4,
-                                    Math.sin(a) * r), 1, 0, 0, 0, 0, form.dust(1.4f));
+                            Vfx.fallbackDust(hand.clone().add(Math.cos(a) * r, Math.sin(tick * 0.3) * 0.4, Math.sin(a) * r),
+                                    form.dust(1.4f));
                         }
                         world.spawnParticle(Particle.ENCHANT, hand, 10, 0.8, 0.8, 0.8, 0.6);
-                        if (tick % 5 == 0) {
-                            Vfx.burst(hand, form.color(), 6, 0.1 + tick * 0.01, 1.0f);
-                        }
                         if (tick == 20) {
                             world.spawnParticle(Particle.TOTEM_OF_UNDYING, hand, 40, 0.3, 0.4, 0.3, 0.4);
                         }
@@ -488,13 +471,15 @@ public final class ReleaseService implements Listener {
         Location base = player.getLocation();
         var world = base.getWorld();
         // A faint, slowly turning sheath of reiatsu for players with the resource pack.
-        double sheath = release.advanced ? 1.15 : .9;
+        double body = KitFx.size(player);
+        double sheath = (release.advanced ? 1.15 : .9) * body;
         Vfx.keep("sheath:" + player.getUniqueId(), 6, () -> Vfx.model(VfxKind.AURA, base, release.form.color())
                         .follow(player, new Vector()).tone(release.advanced ? 1 : 2)
-                        .pose(new Quaternionf(), Vfx.scale(sheath, 2.3, sheath)))
+                        .pose(new Quaternionf(), Vfx.scale(sheath, 2.3 * body, sheath)))
                 .move(2, new Vector3f(), new Quaternionf().rotateY(tick * .09f),
-                        Vfx.scale(sheath + Math.sin(tick * .2) * .06, 2.2 + Math.sin(tick * .13) * .15, sheath));
+                        Vfx.scale(sheath + Math.sin(tick * .2) * .06, (2.2 + Math.sin(tick * .13) * .15) * body, sheath));
         release.element.aura(base, tick, release.advanced);
+        KitFx.aura(player, release, tick);
         for (int i = 0; i < 2; i++) {
             double a = tick * 0.35 + i * Math.PI;
             world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 0.75,
@@ -941,13 +926,7 @@ public final class ReleaseService implements Listener {
                     cancel();
                     return;
                 }
-                if (release.theme == Theme.HOLLOW) {
-                    for (double y = -0.55; y <= 0.56; y += 0.55) {
-                        Vfx.arc(center, forward, size * 0.75, release.form.color(), 1.4f, y);
-                    }
-                } else {
-                    Vfx.arc(center, forward, size, release.form.color(), 1.8f, 0);
-                }
+                KitFx.wave(release, center, forward, size, step);
                 accent(release, center, 4, 0.5, 0.3, 0.5, 0.02);
                 if (release.theme == Theme.SOUL_REAPER) {
                     center.getWorld().spawnParticle(Particle.SWEEP_ATTACK, center, 1);
@@ -967,7 +946,7 @@ public final class ReleaseService implements Listener {
     }
 
     /** One length of a fired beam: a white core inside the form's colour, swelling then thinning out. */
-    private static void beamSegment(Location from, Location to, Color color, double width) {
+    static void beamSegment(Location from, Location to, Color color, double width) {
         Vector span = to.toVector().subtract(from.toVector());
         double length = span.length();
         if (length < .05) {
@@ -1027,6 +1006,7 @@ public final class ReleaseService implements Listener {
 
     private static void afterimage(Location at, Release release) {
         Vfx.burst(at, release.form.color(), 40, 0.35, 1.5f);
+        KitFx.vanish(release, at);
         at.getWorld().spawnParticle(Particle.CLOUD, at, 12, 0.3, 0.6, 0.3, 0.02);
         accent(release, at, 10, 0.3, 0.6, 0.3, 0.05);
     }
@@ -1070,6 +1050,7 @@ public final class ReleaseService implements Listener {
                 .to(1, cero ? 4 : 1, new Quaternionf().rotateY(1.5f).rotateX(.7f), Vfx.scale(cero ? 1.1 : .55))
                 .grow(cero ? 6 : 3, 4, Vfx.scale(.05))
                 .life(cero ? 11 : 7, 3);
+        KitFx.charge(release, origin.clone().add(forward), forward);
         double beamWidth = cero ? 1.15 : .45;
         int speed = cero ? 4 : 3;
         new BukkitRunnable() {
@@ -1099,14 +1080,15 @@ public final class ReleaseService implements Listener {
                     }
                     if (struck != null || (!release.element.phases() && point.getBlock().getType().isSolid())
                             || step >= 10) {
-                        beamSegment(from, point, release.form.color(), beamWidth);
+                        KitFx.beam(release, from, point, beamWidth, step);
+                        KitFx.beamImpact(release, point);
                         burst(point, struck);
                         cancel();
                         return;
                     }
                 }
-                beamSegment(from, origin.clone().add(forward.clone().multiply(1 + (step + 1) * speed)),
-                        release.form.color(), beamWidth);
+                KitFx.beam(release, from, origin.clone().add(forward.clone().multiply(1 + (step + 1) * speed)),
+                        beamWidth, step);
                 step++;
             }
 
@@ -1157,6 +1139,7 @@ public final class ReleaseService implements Listener {
                 trailPatch(player, release, groundAt(player.getLocation()));
                 accent(release, at, 2, 0.3, 0.4, 0.3, 0.02);
                 Vfx.burst(at, release.form.color(), 6, 0.5, 1.3f);
+                KitFx.dashTrail(release, player, tick);
                 for (LivingEntity entity : at.getNearbyLivingEntities(1.9)) {
                     if (hit.add(entity.getUniqueId()) && service.canStrike(player, entity)) {
                         hit(player, entity, 6.0, release);
@@ -1187,6 +1170,7 @@ public final class ReleaseService implements Listener {
         BlockData debris = (ground.isSolid() ? ground : Material.STONE).createBlockData();
         Vfx.sound(center, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, 1.0f, 0.7f);
         Vfx.sound(center, Sound.ENTITY_GENERIC_EXPLODE, 0.6f, 0.6f);
+        KitFx.slam(release, player, center, radius);
         for (LivingEntity entity : center.getNearbyLivingEntities(radius)) {
             if (service.canStrike(player, entity)) {
                 hit(player, entity, amount, release);
@@ -1248,6 +1232,7 @@ public final class ReleaseService implements Listener {
                     release.form.color(), 1.3f);
         }
         accent(release, center.clone().add(0, 1, 0), 20, 0.5, 0.8, 0.5, 0.05);
+        KitFx.ward(release, player);
         return true;
     }
 
@@ -1279,7 +1264,7 @@ public final class ReleaseService implements Listener {
                     facing = new Vector(0, 0, 1);
                 }
                 double tilt = ThreadLocalRandom.current().nextDouble(-0.6, 0.6);
-                Vfx.arc(at, facing, last ? 1.8 : 1.2, release.form.color(), last ? 1.7f : 1.2f, tilt);
+                KitFx.flurryHit(release, at, facing, strike, last);
                 at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 1);
                 castSound(at, release.theme, 1.0f + strike * 0.18f);
                 target.setNoDamageTicks(0);
@@ -1381,7 +1366,9 @@ public final class ReleaseService implements Listener {
                 Location floor = groundAt(spot);
                 Location impact = floor != null ? floor : spot;
                 Vfx.fallbackLine(impact.clone().add(0, 9, 0), impact, release.form.color(), 1.1f, 0.45);
-                Vfx.bolt(impact, release.form.color(), 9, .32);
+                if (!KitFx.rainDrop(release, impact)) {
+                    Vfx.bolt(impact, release.form.color(), 9, .32);
+                }
                 Vfx.crater(impact, 1.6, 50);
                 accent(release, impact, 8, 0.2, 0.1, 0.2, 0.05);
                 Vfx.burst(impact.clone().add(0, 0.3, 0), release.form.color(), 10, 0.4, 1.3f);
@@ -1463,6 +1450,7 @@ public final class ReleaseService implements Listener {
                     return;
                 }
                 raisePillar(ground, block, 1.6 + step * 0.12);
+                KitFx.pillar(release, ground, 1.6 + step * 0.12, step);
                 ground.getWorld().spawnParticle(Particle.BLOCK, ground.clone().add(0, 0.2, 0), 14, 0.4, 0.2, 0.4, 0.1,
                         block);
                 accent(release, ground.clone().add(0, 1, 0), 4, 0.2, 0.6, 0.2, 0.02);
@@ -1526,8 +1514,9 @@ public final class ReleaseService implements Listener {
             }
             bound++;
             Location at = entity.getLocation().add(0, entity.getHeight() * 0.5, 0);
-            Vfx.line(chest, at, release.form.color(), 1.0f, 0.3);
-            Vfx.line(chest.clone().add(0, 0.12, 0), at.clone().add(0, 0.12, 0), Color.fromRGB(80, 80, 90), 0.7f, 0.45);
+            Vfx.fallbackLine(chest, at, release.form.color(), 1.0f, 0.3);
+            Vfx.fallbackLine(chest.clone().add(0, 0.12, 0), at.clone().add(0, 0.12, 0), Color.fromRGB(80, 80, 90), 0.7f, 0.45);
+            KitFx.bind(release, chest, at);
             hit(player, entity, 3.0, release);
             entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, 2));
             Vector pull = center.toVector().subtract(entity.getLocation().toVector());
@@ -1603,34 +1592,18 @@ public final class ReleaseService implements Listener {
                         Vfx.fallbackDust(base.clone().add(-Math.cos(a) * 0.4, h, -Math.sin(a) * 0.4), Vfx.dust(dark, 1.6f));
                     }
                 }
-                if (release.theme == Theme.HOLLOW && tick % 2 == 0) {
-                    double a = tick * 0.9;
-                    Vfx.flame(base.clone().add(Math.cos(a) * 1.1, 0, Math.sin(a) * 1.1), Color.fromRGB(60, 30, 80), 2.2, 14);
-                } else if (release.theme == Theme.SOUL_REAPER && tick % 3 == 0) {
-                    double a = tick * 1.3;
-                    Vfx.flame(base.clone().add(Math.cos(a) * .9, 0, Math.sin(a) * .9),
-                            tick % 6 == 0 ? release.form.color() : dark, 2.6, 14);
-                }
                 accent(release, base.clone().add(0, 1, 0), 6, 0.6, 1.0, 0.6, 0.05);
                 if (tick == 0) {
                     // A bolt of light from the sky (no thunder, so it is not heard server-wide).
                     Color bolt = release.theme == Theme.HOLLOW ? dark : Color.WHITE;
                     Vfx.fallbackLine(base.clone().add(0, 18, 0), base, bolt, 1.6f, 0.4);
                     Vfx.bolt(base, release.theme == Theme.HOLLOW ? release.form.color() : Color.WHITE, 18, .55);
-                    world.spawnParticle(Particle.SONIC_BOOM, base.clone().add(0, 1, 0), 1);
-                    // The pillar of reiatsu: the form's colour around a dark core (pure light for Quincy).
-                    Vfx.pillar(base, release.form.color(), 1.7, 10.5, 20, 14);
-                    if (release.theme != Theme.QUINCY) {
-                        Vfx.model(VfxKind.PILLAR, base, dark)
-                                .pose(new Quaternionf(), Vfx.scale(.9, .1, .9))
-                                .to(1, 20, new Quaternionf().rotateY(-2.5f), Vfx.scale(.9, 10, .9))
-                                .to(21, 18, new Quaternionf().rotateY(-5f), Vfx.scale(.3, 11, .3))
-                                .life(42, 8);
-                    }
+                    Vfx.fallbackParticle(base.clone().add(0, 1, 0), Particle.SONIC_BOOM, 1, 0, 0);
+                    // Then the kit's own entrance: every Bankai, Segunda Etapa, Vollständig and Complete Fullbring
+                    // has its own.
+                    KitFx.advanced(player, release);
                 }
                 if (tick == 20) {
-                    Location ground = groundAt(base);
-                    Vfx.crater(ground != null ? ground : base, 7, 200);
                     Vfx.shockwave(plugin, base, release.form.color(), 9.0, 12);
                     Vfx.burst(base.clone().add(0, 1, 0), release.form.color(), 80, 1.2, 2.0f);
                     world.spawnParticle(Particle.EXPLOSION, base.clone().add(0, 1, 0), 3, 0.8, 0.5, 0.8, 0);
@@ -1653,6 +1626,7 @@ public final class ReleaseService implements Listener {
         double yaw = Math.toRadians(base.getYaw());
         Vector forward = new Vector(-Math.sin(yaw), 0, Math.cos(yaw));
         Vector right = new Vector(-Math.cos(yaw), 0, -Math.sin(yaw));
+        double body = KitFx.size(player);
         switch (release.theme) {
             case QUINCY -> {
                 // Two flapping wings of light behind the shoulders.
@@ -1660,11 +1634,11 @@ public final class ReleaseService implements Listener {
                 for (int side = -1; side <= 1; side += 2) {
                     int s = side;
                     Vector offset = new Vector(0, 1.3, 0).add(forward.clone().multiply(-0.3))
-                            .add(right.clone().multiply(side * 0.12));
+                            .add(right.clone().multiply(side * 0.12)).multiply(body);
                     // In the facing frame, -X is the player's right; the right wing is mirrored onto it.
                     float beat = (float) (Math.sin(tick * 0.25) * 0.3 + 0.12);
                     Quaternionf pose = Vfx.facing(forward).rotateY(-s * 0.42f).rotateZ(-s * beat);
-                    Vector3f size = Vfx.scale(s > 0 ? -2.1 : 2.1, 2.1, 2.1);
+                    Vector3f size = Vfx.scale((s > 0 ? -2.1 : 2.1) * body, 2.1 * body, 2.1 * body);
                     Vfx.keep("wing:" + player.getUniqueId() + ":" + side, 6, () -> Vfx.model(VfxKind.WING,
                                     player.getLocation().add(offset), release.form.color())
                             .follow(player, offset).pose(pose, size))
@@ -1711,12 +1685,12 @@ public final class ReleaseService implements Listener {
                 // Bone horns above the mask, swept out to each side.
                 for (int side = -1; side <= 1; side += 2) {
                     Vector offset = new Vector(0, 1.78, 0).add(right.clone().multiply(side * 0.17))
-                            .add(forward.clone().multiply(0.04));
+                            .add(forward.clone().multiply(0.04)).multiply(body);
                     Quaternionf pose = Vfx.facing(forward).rotateZ(side * 0.55f);
                     Vfx.keep("horn:" + player.getUniqueId() + ":" + side, 6, () -> Vfx.model(VfxKind.HORN,
                                     player.getLocation().add(offset), Color.WHITE)
-                            .follow(player, offset).pose(pose, Vfx.scale(1.3)))
-                            .offset(offset).move(2, new Vector3f(), pose, Vfx.scale(1.3));
+                            .follow(player, offset).pose(pose, Vfx.scale(1.3 * body)))
+                            .offset(offset).move(2, new Vector3f(), pose, Vfx.scale(1.3 * body));
                 }
                 if (tick % 4 == 0) {
                     Color bone = Color.fromRGB(235, 228, 205);
@@ -1741,12 +1715,12 @@ public final class ReleaseService implements Listener {
                 for (int plate = 0; plate < 4; plate++) {
                     double a = tick * 0.15 + plate * (Math.PI / 2);
                     Vector out = new Vector(Math.cos(a), 0, Math.sin(a));
-                    Vector offset = out.clone().multiply(1.1).setY(1.0);
+                    Vector offset = out.clone().multiply(1.1).setY(1.0).multiply(body);
                     Quaternionf pose = Vfx.facing(out);
                     Vfx.keep("plate:" + player.getUniqueId() + ":" + plate, 6, () -> Vfx.model(VfxKind.PLATE,
                                     player.getLocation().add(offset), release.form.color())
-                            .follow(player, offset).pose(pose, Vfx.scale(1.15)))
-                            .offset(offset).move(2, new Vector3f(), pose, Vfx.scale(1.15));
+                            .follow(player, offset).pose(pose, Vfx.scale(1.15 * body)))
+                            .offset(offset).move(2, new Vector3f(), pose, Vfx.scale(1.15 * body));
                     for (double h = -0.5; h <= 0.51; h += 0.5) {
                         Vfx.fallbackDust(base.clone().add(Math.cos(a) * 1.1, 1.0 + h, Math.sin(a) * 1.1),
                                 release.form.dust(1.1f));
@@ -1785,6 +1759,7 @@ public final class ReleaseService implements Listener {
         if (!used) {
             return;
         }
+        MoveFx.special(player, release);
         release.ultimateUsed = true;
         Location loc = player.getLocation();
         player.showTitle(Title.title(Component.text(name, release.form.text(), TextDecoration.BOLD),
@@ -1796,7 +1771,7 @@ public final class ReleaseService implements Listener {
             nearby.sendMessage(callout);
         }
         Vfx.sound(loc, Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);
-        loc.getWorld().spawnParticle(Particle.SONIC_BOOM, loc.clone().add(0, 1, 0), 1);
+        Vfx.fallbackParticle(loc.clone().add(0, 1, 0), Particle.SONIC_BOOM, 1, 0, 0);
     }
 
     /** Two volleys of three giant waves in a fan. */
@@ -1987,6 +1962,7 @@ public final class ReleaseService implements Listener {
                         continue;
                     }
                     raisePillar(ground, block, height);
+                    KitFx.pillar(release, ground, height, i);
                     ground.getWorld().spawnParticle(Particle.BLOCK, ground.clone().add(0, 0.2, 0), 10, 0.4, 0.2, 0.4,
                             0.1, block);
                     for (LivingEntity entity : ground.getNearbyLivingEntities(1.7, 2.5)) {

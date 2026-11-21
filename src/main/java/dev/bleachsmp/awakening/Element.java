@@ -2,6 +2,7 @@ package dev.bleachsmp.awakening;
 
 import dev.bleachsmp.faction.Faction;
 import dev.bleachsmp.fx.Vfx;
+import dev.bleachsmp.fx.VfxKind;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -13,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
+import org.joml.Quaternionf;
 
 /**
  * The element of a released form. It layers its own particles and sounds over everything the form does, so two
@@ -107,9 +109,9 @@ enum Element {
         }
         Class<?> type = particle.getDataType();
         if (type == Void.class) {
-            at.getWorld().spawnParticle(particle, at, count, dx, dy, dz, speed);
+            Vfx.particle(particle, at, count, dx, dy, dz, speed, null);
         } else if (type == BlockData.class) {
-            at.getWorld().spawnParticle(particle, at, count, dx, dy, dz, speed, element.block);
+            Vfx.particle(particle, at, count, dx, dy, dz, speed, element.block);
         }
     }
 
@@ -129,7 +131,7 @@ enum Element {
             accent(at, Math.max(1, count / 3), dx, dy, dz, Math.min(speed, 0.05));
         }
         if (count >= 4) {
-            at.getWorld().spawnParticle(Particle.DUST, at, Math.max(1, count / 4), dx, dy, dz, 0, Vfx.dust(tint, 1.3f));
+            Vfx.particle(Particle.DUST, at, Math.max(1, count / 4), dx, dy, dz, 0, Vfx.dust(tint, 1.3f));
         }
     }
 
@@ -139,12 +141,13 @@ enum Element {
         main(at, count, 0.35 * scale, 0.35 * scale, 0.35 * scale, 0.04);
         accent(at, Math.max(2, count / 2), 0.3 * scale, 0.3 * scale, 0.3 * scale, 0.05);
         Vfx.burst(at, tint, Math.max(3, count / 2), 0.3 * scale, 1.4f);
+        shapes(at, scale);
         if (this == LIGHTNING) {
             // A short jagged arc out of the impact.
             Location point = at.clone();
             for (int i = 0; i < 5; i++) {
                 Location next = point.clone().add(rand(0.7 * scale), rand(0.5 * scale) + 0.2, rand(0.7 * scale));
-                Vfx.line(point, next, tint, 0.8f, 0.2);
+                Vfx.fallbackLine(point, next, tint, 0.8f, 0.2);
                 point = next;
             }
         }
@@ -152,6 +155,169 @@ enum Element {
 
     private static double rand(double spread) {
         return (Math.random() * 2 - 1) * spread;
+    }
+
+    // ---------------------------------------------------------------- shapes (resource-pack models)
+
+    /** Lighter or darker shades of the element's colour, for layered shapes. */
+    Color shade(double factor) {
+        return Color.fromRGB(Math.clamp((int) (tint.getRed() * factor), 0, 255),
+                Math.clamp((int) (tint.getGreen() * factor), 0, 255), Math.clamp((int) (tint.getBlue() * factor), 0, 255));
+    }
+
+    /** The element's impact, in shapes: what an element looks like when it lands. */
+    void shapes(Location at, double scale) {
+        Location ground = ReleaseService.groundAt(at);
+        switch (this) {
+            case FIRE -> {
+                for (int i = 0; i < 3 + (int) (scale * 2); i++) {
+                    Vfx.flame(at.clone().add(rand(.5 * scale), -.4, rand(.5 * scale)),
+                            i % 2 == 0 ? tint : Color.fromRGB(255, 200, 80), .9 + scale * .5, 10);
+                }
+                Vfx.scatter(VfxKind.DROP, at, Color.fromRGB(255, 160, 40), (int) (3 * scale), .9 * scale, .7, 10);
+            }
+            case ICE -> {
+                Vfx.scatter(VfxKind.SHARD, at, tint, 3 + (int) (scale * 2), .9 * scale, .45, 12);
+                if (ground != null) {
+                    Vfx.erupt(VfxKind.SHARD, ground, tint, 3 + (int) scale * 2, .5 * scale, .8 + scale * .5, 22);
+                }
+            }
+            case LIGHTNING -> {
+                for (int i = 0; i < 3 + (int) scale; i++) {
+                    Vfx.zap(at, at.clone().add(rand(1.6 * scale), rand(1.2 * scale), rand(1.6 * scale)), tint, .1);
+                }
+            }
+            case WIND -> {
+                Vfx.whirl(at.clone().subtract(0, .3, 0), tint, 1 + scale * .5, 8);
+                Vfx.gust(at, new Vector(rand(1), 0, rand(1)), tint, 1.5 * scale, 8);
+            }
+            case SHADOW -> {
+                Vfx.smoke(at, tint, 3 + (int) (scale * 2), .5 * scale, .8 + scale * .4, 16);
+                Vfx.smoke(at, Color.fromRGB(70, 0, 30), 1, .3, .6 + scale * .3, 12);
+            }
+            case WATER -> {
+                Vfx.drops(at, tint, 4 + (int) (scale * 3), .9 * scale, 12);
+                if (ground != null) {
+                    Vfx.model(VfxKind.RING, ground.clone().add(0, .08, 0), shade(1.3))
+                            .pose(new Quaternionf(), Vfx.scale(.3, .5, .3))
+                            .grow(1, 8, Vfx.scale(1.2 + scale, .5, 1.2 + scale)).life(10, 5);
+                }
+            }
+            case BLOOD -> {
+                Vfx.drops(at, tint, 5 + (int) (scale * 3), 1.1 * scale, 12);
+                Vfx.model(VfxKind.CLAW, at, shade(1.6))
+                        .pose(Vfx.facing(new Vector(rand(1), 0, rand(1))), Vfx.scale(.4 * scale))
+                        .grow(1, 2, Vfx.scale(1.1 * scale)).life(7, 4);
+            }
+            case PETAL, PALE_PETAL -> Vfx.petals(at, tint, 6 + (int) (scale * 4), 1.4 * scale, 18);
+            case EARTH -> {
+                Vfx.scatter(VfxKind.ROCK, at, tint, 3 + (int) (scale * 2), 1.0 * scale, .8, 14);
+                if (ground != null) {
+                    Vfx.erupt(VfxKind.SPIKE, ground, tint, 3 + (int) scale * 2, .6 * scale, .9 + scale * .5, 22);
+                }
+            }
+            case LIGHT -> {
+                Vfx.glyph(VfxKind.STAR, at, tint, .6 * scale, 10);
+                Vfx.model(VfxKind.RING, at, Color.WHITE)
+                        .pose(Vfx.facing(new Vector(0, 1, 0)).rotateX(1.2f), Vfx.scale(.3))
+                        .grow(1, 6, Vfx.scale(1.4 * scale)).life(8, 4);
+            }
+            case POISON -> {
+                Vfx.smoke(at, tint, 2 + (int) scale, .6 * scale, .7 + scale * .3, 20);
+                Vfx.drops(at, shade(.7), 3 + (int) (scale * 2), .8 * scale, 12);
+            }
+            case SOUND -> {
+                Vfx.glyph(VfxKind.NOTE, at.clone().add(rand(.6), .2, rand(.6)), tint, .5 * scale, 14);
+                for (int i = 0; i < 2; i++) {
+                    Vfx.model(VfxKind.RING, at, tint).tone(i)
+                            .pose(Vfx.facing(new Vector(rand(1), rand(1), rand(1))), Vfx.scale(.2))
+                            .grow(1 + i * 2, 6, Vfx.scale((1.2 + i * .8) * scale)).life(9 + i * 2, 4);
+                }
+            }
+        }
+    }
+
+    /** The element rising around a player at the peak of a release. */
+    void rise(Location base, double scale) {
+        Location body = base.clone().add(0, 1, 0);
+        int big = (int) Math.round(scale * 4);
+        switch (this) {
+            case FIRE -> {
+                for (int i = 0; i < 6 + big; i++) {
+                    double a = i * Math.PI * 2 / (6 + big);
+                    Vfx.flame(base.clone().add(Math.cos(a) * 1.8 * scale, 0, Math.sin(a) * 1.8 * scale),
+                            i % 3 == 0 ? Color.fromRGB(255, 210, 90) : tint, 1.6 + scale, 16);
+                }
+            }
+            case ICE -> Vfx.erupt(VfxKind.SHARD, base, tint, 6 + big, 1.8 * scale, 1.4 + scale, 40);
+            case LIGHTNING -> {
+                for (int i = 0; i < 4 + big; i++) {
+                    Vfx.zap(body, body.clone().add(rand(2.5 * scale), rand(1.5 * scale) + .5, rand(2.5 * scale)), tint, .14);
+                }
+            }
+            case WIND -> {
+                Vfx.whirl(base, tint, 1.6 * scale, 16);
+                Vfx.whirl(base.clone().add(0, 1.4, 0), Color.WHITE, 1.2 * scale, 14);
+            }
+            case SHADOW -> Vfx.smoke(body, tint, 6 + big, 1.4 * scale, 1.3 * scale, 26);
+            case WATER -> {
+                for (int i = 0; i < 4; i++) {
+                    double a = i * Math.PI / 2;
+                    Vector out = new Vector(Math.cos(a), 0, Math.sin(a));
+                    Vfx.wave(base.clone().add(out.clone().multiply(.6)), out, tint, 1.8 * scale, 1.2 * scale, 2.5 * scale, 14);
+                }
+                Vfx.drops(body, shade(1.3), 6 + big, 1.2 * scale, 16);
+            }
+            case BLOOD -> {
+                Vfx.drops(body, tint, 10 + big * 2, 1.4 * scale, 16);
+                Vfx.pillar(base, shade(.6), .9 * scale, 3 * scale, 6, 6);
+            }
+            case PETAL, PALE_PETAL -> Vfx.petals(body, tint, 20 + big * 4, 2.6 * scale, 30);
+            case EARTH -> {
+                Vfx.erupt(VfxKind.SPIKE, base, tint, 6 + big, 2.0 * scale, 1.4 + scale, 36);
+                Vfx.scatter(VfxKind.ROCK, base.clone().add(0, .3, 0), tint, 4 + big, 1.4 * scale, 1.0, 18);
+            }
+            case LIGHT -> {
+                Vfx.sigil(VfxKind.SIGIL, base, tint, 2 * scale, 34);
+                Vfx.pillar(base, tint, .5 * scale, 6 * scale, 8, 10);
+            }
+            case POISON -> {
+                Vfx.smoke(base.clone().add(0, .4, 0), tint, 6 + big, 1.8 * scale, 1.2 * scale, 30);
+                Vfx.drops(body, shade(.6), 4 + big, 1.0 * scale, 14);
+            }
+            case SOUND -> {
+                for (int i = 0; i < 6; i++) {
+                    double a = i * Math.PI / 3;
+                    Vfx.glyph(VfxKind.NOTE, body.clone().add(Math.cos(a) * 1.6, .6, Math.sin(a) * 1.6), tint, .6, 20);
+                }
+            }
+        }
+    }
+
+    /** A little of the element hanging around an advanced form. */
+    private void auraShapes(Location base, int tick) {
+        Location body = base.clone().add(rand(.5), .3 + Math.random() * 1.4, rand(.5));
+        switch (this) {
+            case FIRE -> Vfx.flame(base.clone().add(rand(.5), 0, rand(.5)), tint, 1.0, 10);
+            case ICE -> Vfx.scatter(VfxKind.SHARD, body, tint, 1, .3, .25, 12);
+            case LIGHTNING -> Vfx.zap(body, body.clone().add(rand(.9), rand(.9), rand(.9)), tint, .06);
+            case WIND -> Vfx.whirl(base.clone().add(0, .1, 0), tint, .9, 8);
+            case SHADOW -> Vfx.smoke(base.clone().add(0, .2, 0), tint, 1, .4, .7, 14);
+            case WATER, BLOOD -> Vfx.drops(body, tint, 1, .3, 10);
+            case PETAL, PALE_PETAL -> Vfx.petals(body, tint, 2, .9, 16);
+            case EARTH -> {
+                if (tick % 18 == 0) {
+                    Vfx.scatter(VfxKind.ROCK, base.clone().add(0, .1, 0), tint, 1, .4, .4, 10);
+                }
+            }
+            case LIGHT -> Vfx.glyph(VfxKind.STAR, body, tint, .2, 10);
+            case POISON -> Vfx.smoke(base.clone().add(0, .3, 0), tint, 1, .4, .5, 16);
+            case SOUND -> {
+                if (tick % 18 == 0) {
+                    Vfx.glyph(VfxKind.NOTE, body.add(0, .5, 0), tint, .35, 14);
+                }
+            }
+        }
     }
 
     /** Shadow techniques pass through walls. */
@@ -193,6 +359,9 @@ enum Element {
 
     /** Ambient particles around a released player. Advanced forms are denser. */
     void aura(Location base, int tick, boolean advanced) {
+        if (advanced && tick % 6 == 0) {
+            auraShapes(base, tick);
+        }
         if (tick % 4 != 0) {
             return;
         }
@@ -285,6 +454,7 @@ enum Element {
         double scale = advanced ? 1.8 : 1.0;
         Location body = base.clone().add(0, 1, 0);
         burst(body, 2.0 * scale);
+        rise(base, scale);
         castSound(base, advanced);
         switch (this) {
             case FIRE -> {
@@ -307,7 +477,7 @@ enum Element {
                     Location point = strike.clone().add(0, 12, 0);
                     while (point.getY() > strike.getY()) {
                         Location next = point.clone().add(rand(0.6), -1.2, rand(0.6));
-                        Vfx.line(point, next, tint, 1.3f, 0.25);
+                        Vfx.fallbackLine(point, next, tint, 1.3f, 0.25);
                         point = next;
                     }
                     burst(strike.add(0, 0.3, 0), 1.0);
@@ -342,7 +512,7 @@ enum Element {
             case BLOOD -> {
                 for (int i = 0; i < 16; i++) {
                     double a = i * Math.PI / 8;
-                    Vfx.line(body, body.clone().add(Math.cos(a) * 2.5 * scale, rand(0.6), Math.sin(a) * 2.5 * scale),
+                    Vfx.fallbackLine(body, body.clone().add(Math.cos(a) * 2.5 * scale, rand(0.6), Math.sin(a) * 2.5 * scale),
                             tint, 1.1f, 0.3);
                 }
                 accent(body, (int) (10 * scale), 0.8, 0.5, 0.8, 0.1);
@@ -379,7 +549,7 @@ enum Element {
                 for (int ring = 1; ring <= (advanced ? 4 : 2); ring++) {
                     Vfx.ring(body, ring * 1.1, 14 + ring * 6, tint, 1.2f);
                 }
-                base.getWorld().spawnParticle(Particle.SONIC_BOOM, body, 1);
+                Vfx.fallbackParticle(body, Particle.SONIC_BOOM, 1, 0, 0);
                 for (int i = 0; i < 12; i++) {
                     double a = i * Math.PI / 6;
                     at(base, Math.cos(a) * 2.0, 1.6, Math.sin(a) * 2.0, Particle.NOTE);

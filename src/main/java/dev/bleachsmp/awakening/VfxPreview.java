@@ -37,6 +37,16 @@ public final class VfxPreview {
                     usage(player);
                     return;
                 }
+                if (args.length > 5) {
+                    // A kit by its name (spaces as underscores) or its number in the playstyle's pool.
+                    Canon.Kit kit = find(faction, style, args[5]);
+                    if (kit == null) {
+                        player.sendMessage(Component.text("No such kit for " + faction + " " + style + ".", NamedTextColor.RED));
+                        return;
+                    }
+                    style = kit.style();
+                    service.releases().previewKits.put(player.getUniqueId(), kit);
+                }
                 service.releases().release(player, faction, style, null, advanced);
             }
             case "use" -> {
@@ -45,6 +55,7 @@ public final class VfxPreview {
                     case "main" -> service.releases().useTechnique(player, false);
                     case "second" -> service.releases().useTechnique(player, true);
                     case "ultimate" -> service.releases().ultimate(player);
+                    case "signature" -> service.signatures().preview(player);
                     default -> usage(player);
                 }
             }
@@ -58,15 +69,38 @@ public final class VfxPreview {
         return switch (args.length) {
             case 2 -> List.of("release", "use", "seal", "demo");
             case 3 -> args[1].equalsIgnoreCase("release") ? List.of("first", "advanced")
-                    : args[1].equalsIgnoreCase("use") ? List.of("main", "second", "ultimate") : List.of();
+                    : args[1].equalsIgnoreCase("use") ? List.of("main", "second", "signature", "ultimate") : List.of();
             case 4 -> args[1].equalsIgnoreCase("release")
                     ? java.util.Arrays.stream(Faction.values()).map(f -> f.name().toLowerCase(Locale.ROOT)).toList()
                     : List.of();
             case 5 -> args[1].equalsIgnoreCase("release")
                     ? java.util.Arrays.stream(Playstyle.values()).map(p -> p.name().toLowerCase(Locale.ROOT)).toList()
                     : List.of();
+            case 6 -> {
+                Faction faction = parse(args[3]);
+                Playstyle style = style(args[4]);
+                yield faction == null || style == null ? List.of()
+                        : Canon.pool(faction, style).stream().map(k -> k.name().replace(' ', '_')).toList();
+            }
             default -> List.of();
         };
+    }
+
+    private static Canon.Kit find(Faction faction, Playstyle style, String key) {
+        List<Canon.Kit> pool = Canon.pool(faction, style);
+        try {
+            int index = Integer.parseInt(key);
+            return index >= 0 && index < pool.size() ? pool.get(index) : null;
+        } catch (NumberFormatException ignored) {
+            // Not a number: match by name, or anywhere in the faction by name.
+        }
+        String wanted = key.replace('_', ' ');
+        for (Canon.Kit kit : Canon.all()) {
+            if (kit.faction() == faction && (kit.name().equalsIgnoreCase(wanted) || kit.advancedName().equalsIgnoreCase(wanted))) {
+                return kit;
+            }
+        }
+        return null;
     }
 
     /** Every base effect in a row in front of the player. */
@@ -108,7 +142,7 @@ public final class VfxPreview {
     }
 
     private static void usage(Player player) {
-        player.sendMessage(Component.text("Usage: /bleach vfx release <first|advanced> [faction] [playstyle] | "
-                + "use <main|second|ultimate> | seal | demo", NamedTextColor.RED));
+        player.sendMessage(Component.text("Usage: /bleach vfx release <first|advanced> [faction] [playstyle] [kit] | "
+                + "use <main|second|signature|ultimate> | seal | demo", NamedTextColor.RED));
     }
 }
