@@ -83,6 +83,37 @@ public final class Vfx {
         if (plugin == null || effects.size() >= MAX_EFFECTS || !modelsVisible(at)) {
             return new Effect(null, kind, color);
         }
+        return spawn(kind, at, color, null);
+    }
+
+    /** Whether {@code player} sees effect models rather than particles. */
+    public static boolean seesModels(Player player) {
+        return plugin != null && packs != null && packs.enabled() && packs.hasPack(player);
+    }
+
+    /**
+     * Like {@link #model}, but only {@code viewer} sees it: for private cues such as sensing reiatsu, which would
+     * give the game away if everyone nearby saw them.
+     */
+    public static Effect modelFor(Player viewer, VfxKind kind, Location at, Color color) {
+        if (effects.size() >= MAX_EFFECTS || !seesModels(viewer) || at.getWorld() == null
+                || !at.getWorld().equals(viewer.getWorld()) || viewer.getLocation().distanceSquared(at) >= VIEW_SQUARED) {
+            return new Effect(null, kind, color);
+        }
+        return spawn(kind, at, color, viewer);
+    }
+
+    /** Particles only {@code viewer} sees, thinned to a quarter when they also see effect models. */
+    public static <T> void particleFor(Player viewer, Particle particle, Location at, int count, double dx, double dy,
+            double dz, double speed, T data) {
+        int n = seesModels(viewer) ? count / 4 + (Math.random() < (count % 4) / 4.0 ? 1 : 0) : count;
+        if (n > 0) {
+            viewer.spawnParticle(particle, at, n, dx, dy, dz, speed, data);
+        }
+    }
+
+    /** Shows the model to {@code only}, or to every nearby pack player when {@code only} is null. */
+    private static Effect spawn(VfxKind kind, Location at, Color color, Player only) {
         Location spot = at.clone();
         spot.setYaw(0);
         spot.setPitch(0);
@@ -98,9 +129,13 @@ public final class Vfx {
             // Energy glows; solid props (rock, bone, armour) stay readable in the dark without glowing.
             entity.setBrightness(kind.glows ? new Display.Brightness(15, 15) : new Display.Brightness(11, 15));
         });
-        for (Player player : spot.getWorld().getPlayers()) {
-            if (packs.hasPack(player) && player.getLocation().distanceSquared(spot) < VIEW_SQUARED) {
-                player.showEntity(plugin, display);
+        if (only != null) {
+            only.showEntity(plugin, display);
+        } else {
+            for (Player player : spot.getWorld().getPlayers()) {
+                if (packs.hasPack(player) && player.getLocation().distanceSquared(spot) < VIEW_SQUARED) {
+                    player.showEntity(plugin, display);
+                }
             }
         }
         Effect effect = new Effect(display, kind, color);

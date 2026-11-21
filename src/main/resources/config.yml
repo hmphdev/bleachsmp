@@ -102,6 +102,9 @@ pressure:
   damage-penalty: 0.10
   cooldown-penalty: 0.15
   adapt-seconds: 10
+  # Visual effects: sensing (only the player who senses it sees it), the fight edge (seen by everyone nearby),
+  # and suppression (only the player who suppresses sees it). Players without the resource pack see particles.
+  vfx: true
 
 awakenings:
   # Shikai and equivalent first forms never require rank. Lower rank numbers are stronger.

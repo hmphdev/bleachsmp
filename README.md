@@ -170,7 +170,12 @@ Every player has a reiatsu level. Rank gives 1–5: rank 5 is 1 and rank 1 is 5.
 - **Suppression:** stay crouched for 3 seconds while unreleased to hide your reiatsu from sensing. This is useful for ambushes, at the cost of moving at sneaking speed.
 - **The fight edge:** once you are in a fight with someone 3 or more levels above you, you deal 10% less damage to them, and your technique and signature cooldowns are 15% longer. After 10 seconds you adapt, the edge fades over 5 seconds, and from then on it is an even fight. You get one chat line when it lands and one when you have adapted. It is worked out per opponent, so fighting several strong players at once does not stack it.
 
-Tune it under `pressure` in `config.yml`, or set `pressure.enabled: false` to turn it off.
+- **What it looks like:** pressure has its own effects, drawn as models for players with the resource pack and as particles for everyone else. Reiatsu takes the colour of a player's released form, or their faction's colour while sealed.
+  - **Sensing** is shown only to the player who feels it. A wisp of the source's reiatsu reaches toward them from its direction, and a ring closes in on their feet. A heavy gap adds falling grit; an overwhelming one shows a brief, towering aura on the source.
+  - **The fight edge** is visible to everyone nearby. The stronger fighter's reiatsu flares out in a shockwave, the ground cracks under the weaker one, and grit keeps falling on them until they adapt. Then the weight shatters around them.
+  - **Suppression** is shown only to the player suppressing. Their aura collapses inward, and pulses out again when they stand.
+
+Tune it under `pressure` in `config.yml`, set `pressure.vfx: false` to turn off just the effects, or set `pressure.enabled: false` to turn it all off.
 
 ### The Vasto Lorde
 
